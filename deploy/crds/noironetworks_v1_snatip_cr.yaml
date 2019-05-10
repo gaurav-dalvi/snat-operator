@@ -1,0 +1,7 @@
+apiVersion: noironetworks.com/v1
+kind: SnatIP
+metadata:
+  name: example-snatip
+spec:
+  # Add fields here
+  size: 3

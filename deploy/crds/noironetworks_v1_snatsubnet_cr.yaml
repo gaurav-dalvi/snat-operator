@@ -1,0 +1,7 @@
+apiVersion: noironetworks.com/v1
+kind: SnatSubnet
+metadata:
+  name: example-snatsubnet
+spec:
+  # Add fields here
+  size: 3

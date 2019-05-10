@@ -1,0 +1,7 @@
+apiVersion: noironetworks.com/v1
+kind: SnatAllocation
+metadata:
+  name: example-snatallocation
+spec:
+  # Add fields here
+  size: 3
