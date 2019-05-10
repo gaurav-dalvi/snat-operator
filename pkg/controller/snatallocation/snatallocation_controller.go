@@ -7,14 +7,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -52,12 +51,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner SnatAllocation
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &noironetworksv1.SnatAllocation{},
-	})
+	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: HandlePodsForPodsMapper(mgr.GetClient(), []predicate.Predicate{})})
 	if err != nil {
 		return err
 	}
@@ -100,54 +94,31 @@ func (r *ReconcileSnatAllocation) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, err
 	}
 
-	// Define a new Pod object
-	pod := newPodForCR(instance)
-
-	// Set SnatAllocation instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// Check if this Pod already exists
-	found := &corev1.Pod{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, found)
+	// Check if this SnatSubnet already exists
+	found_snatsubnet := &noironetworksv1.SnatSubnet{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: "foo", Namespace: "default"}, found_snatsubnet)
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
-		err = r.client.Create(context.TODO(), pod)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
 		// Pod created successfully - don't requeue
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, err
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Pod already exists - don't requeue
-	reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", found.Namespace, "Pod.Name", found.Name)
-	return reconcile.Result{}, nil
-}
+	reqLogger.Info("snat_allocation", "SnatSubnet.PerNodePorts", found_snatsubnet.Spec.PerNodePorts, "SnatSubnet.SnatIpSubnets", found_snatsubnet.Spec.SnatIpSubnets)
+	reqLogger.Info("snat_allocation-1", "SnatSubnet.SnatPorts", found_snatsubnet.Spec.SnatPorts)
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *noironetworksv1.SnatAllocation) *corev1.Pod {
-	labels := map[string]string{
-		"app": cr.Name,
+	// Check if this SnatIP CR already exists
+	found_snatip := &noironetworksv1.SnatIP{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: "foo1", Namespace: "default"}, found_snatip)
+	if err != nil && errors.IsNotFound(err) {
+		// Pod created successfully - don't requeue
+		return reconcile.Result{}, err
+	} else if err != nil {
+		return reconcile.Result{}, err
 	}
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
-		},
-	}
+
+	reqLogger.Info("snat_allocation-2", "SnatSubnet.Name", found_snatip.Spec.Name, "SnatSubnet.Namespace", found_snatip.Spec.Namespace)
+	reqLogger.Info("snat_allocation-3", "SnatSubnet.ResourceType", found_snatip.Spec.Resourcetype)
+
+	return reconcile.Result{}, nil
 }

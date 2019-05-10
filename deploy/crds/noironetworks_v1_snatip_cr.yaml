@@ -1,7 +1,10 @@
 apiVersion: noironetworks.com/v1
 kind: SnatIP
 metadata:
-  name: example-snatip
+  name: foo1
 spec:
-  # Add fields here
-  size: 3
+  name: foo
+  namespace: default
+  snat_ip_subnets: 
+    - 10.0.0.0/29
+  resourcetype: pod
