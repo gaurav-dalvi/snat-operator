@@ -4,7 +4,7 @@ metadata:
   name: foo1
 spec:
   name: foo
-  namespace: default
+  namespace: foo
   snat_ip_subnets: 
     - 10.0.0.0/29
-  resourcetype: pod
+  resourcetype: namespace

@@ -18,6 +18,7 @@ type handlePodsForPodsMapper struct {
 }
 
 func (h *handlePodsForPodsMapper) Map(obj handler.MapObject) []reconcile.Request {
+	// reqLogger := log.WithValues("Inside Function", "Map")
 	if obj.Object == nil {
 		return nil
 	}
@@ -26,12 +27,14 @@ func (h *handlePodsForPodsMapper) Map(obj handler.MapObject) []reconcile.Request
 	if !ok {
 		return nil
 	}
+	// reqLogger.Info("Inside map function", "Pod is:", pod.ObjectMeta.Name+"--"+pod.Spec.NodeName+"---"+pod.ObjectMeta.Namespace)
 
 	snatipList := &noironetworksv1.SnatIPList{}
-	if err := h.client.List(context.TODO(), client.InNamespace(pod.Namespace), snatipList); err != nil {
+	if err := h.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatipList); err != nil {
 		return nil
 	}
-
+	// if err := h.client.List(context.TODO(), client.InNamespace(pod.Namespace), snatipList); err != nil {
+	// reqLogger.Info(" map function", "SnatIp list is:", snatipList)
 	requests := FilterPodsPerSnatIP(snatipList, pod)
 	return requests
 }
@@ -47,47 +50,48 @@ Map or not, based on CR spec of SnatIP from the list
 */
 func FilterPodsPerSnatIP(snatipList *noironetworksv1.SnatIPList, pod *corev1.Pod) []reconcile.Request {
 	var requests []reconcile.Request
+	reqLogger := log.WithValues("Inside Function", "FilterPodsPerSnatIP")
 
 	for _, item := range snatipList.Items {
-
 		switch item.Spec.Resourcetype {
 		// Because service has the highest priority among all SnatIp resources. refer SNAT spec for more details
-		case "service":
-			if item.Spec.Name == pod.Name {
-				requests = append(requests, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: item.Namespace,
-						Name:      "snat_service" + item.Name,
-					},
-				})
-			}
+		// case "service":
+		// 	if item.Spec.Name == pod.Name {
+		// 		requests = append(requests, reconcile.Request{
+		// 			NamespacedName: types.NamespacedName{
+		// 				Namespace: item.Namespace,
+		// 				Name:      "snat-service-" + item.Name,
+		// 			},
+		// 		})
+		// 	}
 
-		case "deployment":
-			if item.Spec.Name == pod.ObjectMeta.Namespace {
-				requests = append(requests, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: item.Namespace,
-						Name:      "snat_deployment" + item.Name,
-					},
-				})
-			}
+		// case "deployment":
+		// 	if item.Spec.Name == pod.ObjectMeta.Namespace {
+		// 		requests = append(requests, reconcile.Request{
+		// 			NamespacedName: types.NamespacedName{
+		// 				Namespace: item.Namespace,
+		// 				Name:      "snat-deployment-" + item.Name,
+		// 			},
+		// 		})
+		// 	}
 
-		case "pod":
-			if item.Spec.Name == pod.Name {
-				requests = append(requests, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: item.Namespace,
-						Name:      "snat_pod" + item.Name,
-					},
-				})
-			}
+		// case "pod":
+		// 	if item.Spec.Name == pod.Name {
+		// 		requests = append(requests, reconcile.Request{
+		// 			NamespacedName: types.NamespacedName{
+		// 				Namespace: item.Namespace,
+		// 				Name:      "snat-pod-" + item.Name,
+		// 			},
+		// 		})
+		// 	}
 
 		case "namespace":
+			reqLogger.Info("Items: ", "snatip", item.Spec.Name+"---"+item.Spec.Namespace+"--------"+item.Spec.Resourcetype)
 			if item.Spec.Name == pod.ObjectMeta.Namespace {
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
-						Namespace: item.Namespace,
-						Name:      "snat_namespace" + item.Name,
+						Namespace: item.Spec.Name,
+						Name:      "snat-namespace-" + pod.Name,
 					},
 				})
 			}
