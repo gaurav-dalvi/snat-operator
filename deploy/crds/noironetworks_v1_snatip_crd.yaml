@@ -40,6 +40,10 @@ spec:
               - service
               - namespace
               type: string
+          required:
+          - resourcetype
+          - name
+          - namespace
           type: object
         status:
           type: object

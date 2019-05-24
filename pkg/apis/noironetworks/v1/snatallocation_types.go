@@ -2,6 +2,7 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	// "k8s.io/apimachinery/pkg/types"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -13,7 +14,14 @@ type SnatAllocationSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
-	Name string `json:"name"`
+	PodName string `json:"pod_name"`
+	// PodUid        types.UID `json:"pod_uid"`
+	// NodeName      string    `json:"node_name"`
+	// SnatPortRange PortRange `json:"snat_port_range"`
+	// SnatIp        string    `json:"snat_ip"`
+	// Namespace     string    `json:"namespace"`
+	// MacAddress    string    `json:"mac_address"`
+	// Scope         string    `json:"string,omitempty"`
 }
 
 // SnatAllocationStatus defines the observed state of SnatAllocation
@@ -22,7 +30,6 @@ type SnatAllocationStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
-	SnatAllocationItems []SnatItems `json:"snat_allocation_items,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -48,14 +55,4 @@ type SnatAllocationList struct {
 
 func init() {
 	SchemeBuilder.Register(&SnatAllocation{}, &SnatAllocationList{})
-}
-
-type SnatItems struct {
-	PodName       string    `json:"pod_name,omitempty"`
-	NodeName      string    `json:"node_name,omitempty"`
-	SnatPortRange PortRange `json:"snat_port_range,omitempty"`
-	SnatIp        string    `json:"snat_ip,omitempty"`
-	Namespace     string    `json:"namespace,omitempty"`
-	MacAddress    string    `json:"mac_address,omitempty"`
-	Scope         string    `json:"string,omitempty"`
 }

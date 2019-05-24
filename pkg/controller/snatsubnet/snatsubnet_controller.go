@@ -19,11 +19,6 @@ import (
 
 var log = logf.Log.WithName("controller_snatsubnet")
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
-
 // Add creates a new SnatSubnet Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -64,8 +59,6 @@ type ReconcileSnatSubnet struct {
 
 // Reconcile reads that state of the cluster for a SnatSubnet object and makes changes based on the state read
 // and what is in the SnatSubnet.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
@@ -79,8 +72,9 @@ func (r *ReconcileSnatSubnet) Reconcile(request reconcile.Request) (reconcile.Re
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
+			// For Snat controller only one object of SnatSubnet has to be present.
+			// If its not then its an error
+			reqLogger.Error(err, "snatsubnet resource not found")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -95,6 +89,29 @@ func (r *ReconcileSnatSubnet) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info("Inside snatsubnet controller")
+	// Only one instance of SnatSubnet object has to be present in the system.
+	// Any new creation of snatsubnet CR will be deleted here.
+	snatSubnetList := &noironetworksv1.SnatSubnetList{}
+	err = r.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatSubnetList)
+	if err != nil {
+		reqLogger.Error(err, "Failed to list existing snatsubnets\n")
+		return reconcile.Result{}, err
+	}
+	if len(snatSubnetList.Items) != 1 {
+		reqLogger.Error(err, "Only one instance of snatsubnet should be present in the system, deleting this one: "+request.Name)
+		// select the item matching with request name
+		for _, item := range snatSubnetList.Items {
+			if item.ObjectMeta.Name == request.Name {
+				err = r.client.Delete(context.TODO(), &item)
+				if err != nil {
+					reqLogger.Error(err, "failed to delete a snatsubnet item : "+item.ObjectMeta.Name)
+					return reconcile.Result{}, err
+				}
+				break
+			}
+		}
+		return reconcile.Result{}, err
+	}
+
 	return reconcile.Result{}, nil
 }

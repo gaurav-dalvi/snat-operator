@@ -24,11 +24,6 @@ import (
 
 var log = logf.Log.WithName("controller_snatallocation")
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
-
 // Add creates a new SnatAllocation Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -74,8 +69,6 @@ type ReconcileSnatAllocation struct {
 
 // Reconcile reads that state of the cluster for a SnatAllocation object and makes changes based on the state read
 // and what is in the SnatAllocation.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
@@ -85,8 +78,6 @@ func (r *ReconcileSnatAllocation) Reconcile(request reconcile.Request) (reconcil
 
 	// If pod belongs to namespace in snapt ip cr
 	if strings.HasPrefix(request.Name, "snat-namespace-") {
-		s := utils.GetPodNameFromReoncileRequest(request.Name)
-		reqLogger.Info("XXXXX", "NAME", s)
 		found_pod := &corev1.Pod{}
 		err := r.client.Get(context.TODO(), types.NamespacedName{Name: utils.GetPodNameFromReoncileRequest(request.Name), Namespace: request.Namespace}, found_pod)
 		if err != nil && errors.IsNotFound(err) {
@@ -94,8 +85,8 @@ func (r *ReconcileSnatAllocation) Reconcile(request reconcile.Request) (reconcil
 		} else if err != nil {
 			return reconcile.Result{}, err
 		}
-
-		reqLogger.Info("*************POD found", "Pod name", found_pod.Name)
+		reqLogger.Info("********POD found********", "Pod name", found_pod.Name)
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	// Fetch the SnatAllocation instance
@@ -106,13 +97,13 @@ func (r *ReconcileSnatAllocation) Reconcile(request reconcile.Request) (reconcil
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			// reqLogger.Info("Creating SNATAllocation CR")
-			// cr := newSnatAllocationCR()
-			// err = r.client.Create(context.TODO(), cr)
-			// if err != nil {
-			// 	reqLogger.Error(err, "failed to create a snat allocation cr")
-			// 	return reconcile.Result{}, err
-			// }
+			reqLogger.Info("Creating SNATAllocation CR")
+			cr := newSnatAllocationCR()
+			err = r.client.Create(context.TODO(), cr)
+			if err != nil {
+				reqLogger.Error(err, "failed to create a snat allocation cr")
+				return reconcile.Result{}, err
+			}
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -154,11 +145,41 @@ func newSnatAllocationCR() *noironetworksv1.SnatAllocation {
 
 	return &noironetworksv1.SnatAllocation{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "globalsnat",
+			Name:      "first",
 			Namespace: "default",
 		},
 		Spec: noironetworksv1.SnatAllocationSpec{
-			Name: "globalsnat",
+			PodName: "gaurvpod",
 		},
 	}
+}
+
+func (r *ReconcileSnatAllocation) getAllSnatSubnets() (*noironetworksv1.SnatSubnetList, error) {
+	snatSubnetList := &noironetworksv1.SnatSubnetList{}
+	err := r.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatSubnetList)
+	if err != nil {
+		log.Error(err, "failed to list existing snatsubnets")
+		return &noironetworksv1.SnatSubnetList{}, err
+	}
+	return snatSubnetList, nil
+}
+
+func (r *ReconcileSnatAllocation) getAllSnatAllocations() (*noironetworksv1.SnatAllocationList, error) {
+	snatAllocationList := &noironetworksv1.SnatAllocationList{}
+	err := r.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatAllocationList)
+	if err != nil {
+		log.Error(err, "failed to list existing SnatAllocationList")
+		return &noironetworksv1.SnatAllocationList{}, err
+	}
+	return snatAllocationList, nil
+}
+
+func (r *ReconcileSnatAllocation) getAllSnatIps() (*noironetworksv1.SnatIPList, error) {
+	snatIpList := &noironetworksv1.SnatIPList{}
+	err := r.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatIpList)
+	if err != nil {
+		log.Error(err, "failed to list existing snatsubnets")
+		return &noironetworksv1.SnatIPList{}, err
+	}
+	return snatIpList, nil
 }
