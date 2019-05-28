@@ -2,7 +2,7 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -14,14 +14,14 @@ type SnatAllocationSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
-	PodName string `json:"pod_name"`
-	// PodUid        types.UID `json:"pod_uid"`
-	// NodeName      string    `json:"node_name"`
-	// SnatPortRange PortRange `json:"snat_port_range"`
-	// SnatIp        string    `json:"snat_ip"`
-	// Namespace     string    `json:"namespace"`
-	// MacAddress    string    `json:"mac_address"`
-	// Scope         string    `json:"string,omitempty"`
+	Podname       string    `json:"podname"`
+	Poduid        types.UID `json:"poduid"`
+	Nodename      string    `json:"nodename"`
+	Snatportrange PortRange `json:"snatportrange"`
+	Snatip        string    `json:"snatip"`
+	Namespace     string    `json:"namespace"`
+	Macaddress    string    `json:"macaddress"`
+	Scope         string    `json:"string,omitempty"`
 }
 
 // SnatAllocationStatus defines the observed state of SnatAllocation

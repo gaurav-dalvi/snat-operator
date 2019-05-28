@@ -13,6 +13,7 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
+		"github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1.PortRange":            schema_pkg_apis_noironetworks_v1_PortRange(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1.SnatAllocation":       schema_pkg_apis_noironetworks_v1_SnatAllocation(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1.SnatAllocationSpec":   schema_pkg_apis_noironetworks_v1_SnatAllocationSpec(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1.SnatAllocationStatus": schema_pkg_apis_noironetworks_v1_SnatAllocationStatus(ref),
@@ -22,6 +23,30 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1.SnatSubnet":           schema_pkg_apis_noironetworks_v1_SnatSubnet(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1.SnatSubnetSpec":       schema_pkg_apis_noironetworks_v1_SnatSubnetSpec(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1.SnatSubnetStatus":     schema_pkg_apis_noironetworks_v1_SnatSubnetStatus(ref),
+	}
+}
+
+func schema_pkg_apis_noironetworks_v1_PortRange(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"start": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"end": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
 	}
 }
 
@@ -73,7 +98,16 @@ func schema_pkg_apis_noironetworks_v1_SnatAllocationSpec(ref common.ReferenceCal
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "SnatAllocationSpec defines the desired state of SnatAllocation",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"podname": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"podname"},
 			},
 		},
 		Dependencies: []string{},
@@ -140,7 +174,40 @@ func schema_pkg_apis_noironetworks_v1_SnatIPSpec(ref common.ReferenceCallback) c
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "SnatIPSpec defines the desired state of SnatIP",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"resourcetype": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"namespace": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"snatipsubnets": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"resourcetype", "name", "namespace", "snatipsubnets"},
 			},
 		},
 		Dependencies: []string{},
@@ -207,10 +274,45 @@ func schema_pkg_apis_noironetworks_v1_SnatSubnetSpec(ref common.ReferenceCallbac
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "SnatSubnetSpec defines the desired state of SnatSubnet",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"pernodeports": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"snatipsubnets": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"snatports": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1.PortRange"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"pernodeports", "snatipsubnets", "snatports"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1.PortRange"},
 	}
 }
 
@@ -219,9 +321,25 @@ func schema_pkg_apis_noironetworks_v1_SnatSubnetStatus(ref common.ReferenceCallb
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "SnatSubnetStatus defines the observed state of SnatSubnet",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"expandedsnatports": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1.PortRange"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"expandedsnatports"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1.PortRange"},
 	}
 }

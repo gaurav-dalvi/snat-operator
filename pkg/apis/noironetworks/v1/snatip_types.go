@@ -18,7 +18,7 @@ type SnatIPSpec struct {
 	Resourcetype  string   `json:"resourcetype"`
 	Name          string   `json:"name"`
 	Namespace     string   `json:"namespace"`
-	SnatIpSubnets []string `json:"snat_ip_subnets"`
+	Snatipsubnets []string `json:"snatipsubnets"`
 }
 
 // SnatIPStatus defines the observed state of SnatIP

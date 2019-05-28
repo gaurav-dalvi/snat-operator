@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"log"
 	"net"
 	"sort"
 )
@@ -23,7 +22,7 @@ func GetIPsFromCIDR(cidr string) []string {
 
 	ip, ipnet, err := net.ParseCIDR(cidr)
 	if err != nil {
-		log.Fatal("Invalid CIDR, skiiping this one", cidr, err)
+		UtilLog.Error(err, "Invalid CIDR, skiiping this one", cidr)
 	}
 	for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
 		output = append(output, ip.String())

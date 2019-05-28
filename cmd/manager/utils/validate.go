@@ -8,7 +8,7 @@ import (
 
 const (
 	MAX_PORT = 65535
-	MIN_PORT = 0
+	MIN_PORT = 1
 )
 
 var VALID_RESOURCE_TYPES = [4]string{"namespace", "deployment", "service", "pod"}
@@ -23,7 +23,7 @@ type Validator struct {
 func (v *Validator) ValidateSnatSubnet(cr *noironetworksv1.SnatSubnet) {
 	v.Validated = true
 
-	for _, item := range cr.Spec.SnatIpSubnets {
+	for _, item := range cr.Spec.Snatipsubnets {
 		_, _, err := net.ParseCIDR(item)
 		if err != nil {
 			v.ErrorMessage = v.ErrorMessage + "Invalid subnet\n"
@@ -31,12 +31,12 @@ func (v *Validator) ValidateSnatSubnet(cr *noironetworksv1.SnatSubnet) {
 		}
 	}
 
-	if cr.Spec.PerNodePorts > MAX_PORT {
+	if cr.Spec.Pernodeports > MAX_PORT {
 		v.ErrorMessage = v.ErrorMessage + "Invalid number of ports per node\n"
 		v.Validated = false
 	}
 
-	for _, port_range := range cr.Spec.SnatPorts {
+	for _, port_range := range cr.Spec.Snatports {
 		if port_range.Start < MIN_PORT || port_range.Start > MAX_PORT || port_range.End < MIN_PORT || port_range.End > MAX_PORT {
 			v.ErrorMessage = v.ErrorMessage + "Invalid port number in the range\n"
 			v.Validated = false
@@ -52,7 +52,7 @@ func (v *Validator) ValidateSnatSubnet(cr *noironetworksv1.SnatSubnet) {
 func (v *Validator) ValidateSnatIP(cr *noironetworksv1.SnatIP) {
 	v.Validated = true
 
-	for _, item := range cr.Spec.SnatIpSubnets {
+	for _, item := range cr.Spec.Snatipsubnets {
 		_, _, err := net.ParseCIDR(item)
 		if err != nil {
 			v.ErrorMessage = v.ErrorMessage + "Invalid subnet\n"

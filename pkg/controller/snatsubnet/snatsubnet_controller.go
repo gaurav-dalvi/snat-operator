@@ -2,6 +2,7 @@ package snatsubnet
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/gaurav-dalvi/snat-operator/cmd/manager/utils"
 	noironetworksv1 "github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1"
@@ -111,6 +112,18 @@ func (r *ReconcileSnatSubnet) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 		}
 		return reconcile.Result{}, err
+	}
+
+	// Update the status if necessary
+	expandedsnatports := utils.ExpandPortRanges(instance.Spec.Snatports, instance.Spec.Pernodeports)
+	if !reflect.DeepEqual(instance.Status.Expandedsnatports, expandedsnatports) {
+		instance.Status.Expandedsnatports = expandedsnatports
+		err := r.client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			reqLogger.Error(err, "failed to update the SnatSubnet")
+			return reconcile.Result{}, err
+		}
+		reqLogger.Info("Updated snatsubnet status", "Status:", instance.Status)
 	}
 
 	return reconcile.Result{}, nil

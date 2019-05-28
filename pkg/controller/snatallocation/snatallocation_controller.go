@@ -122,7 +122,7 @@ func (r *ReconcileSnatAllocation) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info("snat_allocation", "SnatSubnet.PerNodePorts", found_snatsubnet.Spec.PerNodePorts, "SnatSubnet.SnatIpSubnets", found_snatsubnet.Spec.SnatIpSubnets)
+	reqLogger.Info("snat_allocation", "SnatSubnet.PerNodePorts", found_snatsubnet.Spec.Pernodeports, "SnatSubnet.Status", found_snatsubnet.Status.Expandedsnatports)
 
 	// Check if this SnatIP CR already exists
 	found_snatip := &noironetworksv1.SnatIP{}
@@ -149,7 +149,7 @@ func newSnatAllocationCR() *noironetworksv1.SnatAllocation {
 			Namespace: "default",
 		},
 		Spec: noironetworksv1.SnatAllocationSpec{
-			PodName: "gaurvpod",
+			Podname: "gaurvpod",
 		},
 	}
 }

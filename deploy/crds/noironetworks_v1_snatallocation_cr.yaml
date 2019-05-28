@@ -3,14 +3,14 @@ kind: SnatAllocation
 metadata:
   name: example-snatallocation
 spec:
-    pod_name: gauravpod
-    node_name: minikube
-    snat_port_range:
+    podname: gauravpod
+    nodename: minikube
+    snatport_range:
       start: 1000
       end: 2000
-    snat_ip: 10.20.30.40
+    snatip: 10.20.30.40
     namespace: default
-    mac_address: abcd
+    macaddress: abcd
     #optional
     scope: pod
       

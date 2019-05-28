@@ -40,10 +40,15 @@ spec:
               - service
               - namespace
               type: string
+            snatipsubnets:
+              items:
+                type: string
+              type: array
           required:
           - resourcetype
           - name
           - namespace
+          - snatipsubnets
           type: object
         status:
           type: object
