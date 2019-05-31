@@ -2,6 +2,7 @@ package snatip
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/gaurav-dalvi/snat-operator/cmd/manager/utils"
 	noironetworksv1 "github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1"
@@ -81,12 +82,14 @@ func (r *ReconcileSnatIP) Reconcile(request reconcile.Request) (reconcile.Result
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
+			// reqLogger.Error(err, "snatip resource not found")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
 	reqLogger.Info("snatip-controller", "resourcetype", instance.Spec.Resourcetype, "name", instance.Spec.Name)
+
 	// Validation of SnatIPSpec struct
 	validator := utils.Validator{}
 	validator.ValidateSnatIP(instance)
@@ -95,6 +98,17 @@ func (r *ReconcileSnatIP) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info("snatip-controller-1")
+	// Update the status if necessary
+	expandedIPs := utils.ExpandCIDRs(instance.Spec.Snatipsubnets)
+	if !reflect.DeepEqual(instance.Status.AllIps, expandedIPs) {
+		instance.Status.AllIps = expandedIPs
+		err := r.client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			reqLogger.Error(err, "failed to update the SnatIps")
+			return reconcile.Result{}, err
+		}
+		reqLogger.Info("Updated snatip status", "Status:", instance.Status)
+	}
+
 	return reconcile.Result{}, nil
 }

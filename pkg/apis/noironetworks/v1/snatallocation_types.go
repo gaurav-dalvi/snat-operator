@@ -19,6 +19,7 @@ type SnatAllocationSpec struct {
 	Nodename      string    `json:"nodename"`
 	Snatportrange PortRange `json:"snatportrange"`
 	Snatip        string    `json:"snatip"`
+	Snatipuid     types.UID `json:"snatipuid"`
 	Namespace     string    `json:"namespace"`
 	Macaddress    string    `json:"macaddress"`
 	Scope         string    `json:"string,omitempty"`

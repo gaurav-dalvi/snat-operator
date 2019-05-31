@@ -10,7 +10,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
+
+var MapperLog = logf.Log.WithName("Mapper:")
 
 type handlePodsForPodsMapper struct {
 	client     client.Client
@@ -18,7 +21,6 @@ type handlePodsForPodsMapper struct {
 }
 
 func (h *handlePodsForPodsMapper) Map(obj handler.MapObject) []reconcile.Request {
-	// reqLogger := log.WithValues("Inside Function", "Map")
 	if obj.Object == nil {
 		return nil
 	}
@@ -27,14 +29,14 @@ func (h *handlePodsForPodsMapper) Map(obj handler.MapObject) []reconcile.Request
 	if !ok {
 		return nil
 	}
-	// reqLogger.Info("Inside map function", "Pod is:", pod.ObjectMeta.Name+"--"+pod.Spec.NodeName+"---"+pod.ObjectMeta.Namespace)
+	// MapperLog.Info("Inside pod map function", "Pod is:", pod.ObjectMeta.Name+"--"+pod.Spec.NodeName+"---"+pod.ObjectMeta.Namespace)
 
 	snatipList := &noironetworksv1.SnatIPList{}
 	if err := h.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatipList); err != nil {
 		return nil
 	}
 	// if err := h.client.List(context.TODO(), client.InNamespace(pod.Namespace), snatipList); err != nil {
-	// reqLogger.Info(" map function", "SnatIp list is:", snatipList)
+	// reqLogger.Info(" map pod function", "SnatIp list is:", snatipList)
 	requests := FilterPodsPerSnatIP(snatipList, pod)
 	return requests
 }
@@ -50,8 +52,8 @@ Map or not, based on CR spec of SnatIP from the list
 */
 func FilterPodsPerSnatIP(snatipList *noironetworksv1.SnatIPList, pod *corev1.Pod) []reconcile.Request {
 	var requests []reconcile.Request
-	reqLogger := log.WithValues("Inside Function", "FilterPodsPerSnatIP")
 
+Loop:
 	for _, item := range snatipList.Items {
 		switch item.Spec.Resourcetype {
 		// Because service has the highest priority among all SnatIp resources. refer SNAT spec for more details
@@ -60,9 +62,10 @@ func FilterPodsPerSnatIP(snatipList *noironetworksv1.SnatIPList, pod *corev1.Pod
 		// 		requests = append(requests, reconcile.Request{
 		// 			NamespacedName: types.NamespacedName{
 		// 				Namespace: item.Namespace,
-		// 				Name:      "snat-service-" + item.Name,
+		//				Name:      "snat-service-" + item.Spec.Name + "-" + pod.Name,
 		// 			},
 		// 		})
+		//      break Loop
 		// 	}
 
 		// case "deployment":
@@ -70,9 +73,10 @@ func FilterPodsPerSnatIP(snatipList *noironetworksv1.SnatIPList, pod *corev1.Pod
 		// 		requests = append(requests, reconcile.Request{
 		// 			NamespacedName: types.NamespacedName{
 		// 				Namespace: item.Namespace,
-		// 				Name:      "snat-deployment-" + item.Name,
+		//				Name:      "snat-deployment-" + item.Spec.Name + "-" + pod.Name,
 		// 			},
 		// 		})
+		//      break Loop
 		// 	}
 
 		// case "pod":
@@ -80,20 +84,22 @@ func FilterPodsPerSnatIP(snatipList *noironetworksv1.SnatIPList, pod *corev1.Pod
 		// 		requests = append(requests, reconcile.Request{
 		// 			NamespacedName: types.NamespacedName{
 		// 				Namespace: item.Namespace,
-		// 				Name:      "snat-pod-" + item.Name,
+		// 				Name:      "snat-pod-" + item.Spec.Name + "-" + pod.Name,
 		// 			},
 		// 		})
+		//      break Loop
 		// 	}
 
 		case "namespace":
-			reqLogger.Info("Items: ", "snatip", item.Spec.Name+"---"+item.Spec.Namespace+"--------"+item.Spec.Resourcetype)
+			MapperLog.Info("Pod Mapper Items: ", "snatip", item.Spec.Name+"---"+item.Spec.Namespace+"--------"+item.Spec.Resourcetype)
 			if item.Spec.Name == pod.ObjectMeta.Namespace {
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Namespace: item.Spec.Name,
-						Name:      "snat-namespace-" + pod.Name,
+						Name:      "snat-namespace-" + item.Spec.Name + "-" + pod.Name,
 					},
 				})
+				break Loop
 			}
 
 		default:
@@ -102,4 +108,35 @@ func FilterPodsPerSnatIP(snatipList *noironetworksv1.SnatIPList, pod *corev1.Pod
 
 	}
 	return requests
+}
+
+type handleNodesForPodsMapper struct {
+	client     client.Client
+	predicates []predicate.Predicate
+}
+
+func (h *handleNodesForPodsMapper) Map(obj handler.MapObject) []reconcile.Request {
+	if obj.Object == nil {
+		return nil
+	}
+
+	node, ok := obj.Object.(*corev1.Node)
+	if !ok {
+		return nil
+	}
+
+	MapperLog.Info("Node map function")
+	req := []reconcile.Request{}
+	nodeReq := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: "",
+			Name:      "node-event-" + node.Name,
+		},
+	}
+	req = append(req, nodeReq)
+	return req
+}
+
+func HandleNodesForPodsMapper(client client.Client, predicates []predicate.Predicate) handler.Mapper {
+	return &handleNodesForPodsMapper{client, predicates}
 }

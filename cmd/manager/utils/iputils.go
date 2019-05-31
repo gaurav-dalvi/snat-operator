@@ -42,3 +42,20 @@ func SetDifferenceIPs(inputIps []string, usedIps []string) []string {
 func DrawIP(freeIps []string) {
 	sort.Strings(freeIps)
 }
+
+// Given generic list of CIDRs for subnets
+// return sorted array(based on IP address) of IP addresses.
+func ExpandCIDRs(currCIDRs []string) []string {
+
+	UtilLog.Info("Inside ExpandCIDRs", "currCIDRs:", currCIDRs)
+	var expandedIPs []string
+	for _, item := range currCIDRs {
+		ips := GetIPsFromCIDR(item)
+		expandedIPs = append(expandedIPs, ips...)
+	}
+
+	// Sort list of IPs
+	sort.Strings(expandedIPs)
+
+	return expandedIPs
+}

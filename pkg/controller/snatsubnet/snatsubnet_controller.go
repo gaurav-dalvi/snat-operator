@@ -75,7 +75,7 @@ func (r *ReconcileSnatSubnet) Reconcile(request reconcile.Request) (reconcile.Re
 			// Request object not found, could have been deleted after reconcile request.
 			// For Snat controller only one object of SnatSubnet has to be present.
 			// If its not then its an error
-			reqLogger.Error(err, "snatsubnet resource not found")
+			// reqLogger.Error(err, "snatsubnet resource not found")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.

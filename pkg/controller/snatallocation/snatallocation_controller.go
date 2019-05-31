@@ -4,14 +4,16 @@ import (
 	"context"
 	"strings"
 
-	"github.com/gaurav-dalvi/snat-operator/cmd/manager/utils"
 	noironetworksv1 "github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1"
+	snattypes "github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1"
 
+	"github.com/gaurav-dalvi/snat-operator/cmd/manager/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -54,6 +56,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	err = c.Watch(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: HandlePodsForPodsMapper(mgr.GetClient(), []predicate.Predicate{})})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -76,110 +83,165 @@ func (r *ReconcileSnatAllocation) Reconcile(request reconcile.Request) (reconcil
 	reqLogger := log.WithValues("Request:", request.Namespace+"/"+request.Name)
 	reqLogger.Info("Reconciling SnatAllocation")
 
-	// If pod belongs to namespace in snapt ip cr
-	if strings.HasPrefix(request.Name, "snat-namespace-") {
-		found_pod := &corev1.Pod{}
-		err := r.client.Get(context.TODO(), types.NamespacedName{Name: utils.GetPodNameFromReoncileRequest(request.Name), Namespace: request.Namespace}, found_pod)
-		if err != nil && errors.IsNotFound(err) {
-			return reconcile.Result{}, err
-		} else if err != nil {
-			return reconcile.Result{}, err
-		}
-		reqLogger.Info("********POD found********", "Pod name", found_pod.Name)
-		return reconcile.Result{Requeue: true}, nil
-	}
-
-	// Fetch the SnatAllocation instance
-	instance := &noironetworksv1.SnatAllocation{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			reqLogger.Info("Creating SNATAllocation CR")
-			cr := newSnatAllocationCR()
-			err = r.client.Create(context.TODO(), cr)
-			if err != nil {
-				reqLogger.Error(err, "failed to create a snat allocation cr")
-				return reconcile.Result{}, err
+	// If pod belongs to any resource in the snatip
+	if strings.HasPrefix(request.Name, "snat-") {
+		result, err := r.handlePodEvent(request)
+		return result, err
+	} else {
+		// Fetch the SnatAllocation instance
+		instance := &noironetworksv1.SnatAllocation{}
+		err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				// Request object not found, could have been deleted after reconcile request.
+				// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+				// Return and don't requeue
+				return reconcile.Result{}, nil
 			}
-			return reconcile.Result{}, nil
+			// Error reading the object - requeue the request.
+			return reconcile.Result{}, err
 		}
-		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+
+		reqLogger.Info("Instance found", "Instance name", instance.Name)
 	}
-
-	reqLogger.Info("Instance found", "Instance name", instance.Name)
-
-	// Check if this SnatSubnet already exists
-	found_snatsubnet := &noironetworksv1.SnatSubnet{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: "foo", Namespace: "default"}, found_snatsubnet)
-	if err != nil && errors.IsNotFound(err) {
-		// Pod created successfully - don't requeue
-		return reconcile.Result{}, err
-	} else if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	reqLogger.Info("snat_allocation", "SnatSubnet.PerNodePorts", found_snatsubnet.Spec.Pernodeports, "SnatSubnet.Status", found_snatsubnet.Status.Expandedsnatports)
-
-	// Check if this SnatIP CR already exists
-	found_snatip := &noironetworksv1.SnatIP{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: "foo1", Namespace: "default"}, found_snatip)
-	if err != nil && errors.IsNotFound(err) {
-		// Pod created successfully - don't requeue
-		return reconcile.Result{}, err
-	} else if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	reqLogger.Info("snat_allocation-2", "SnatSubnet.Name", found_snatip.Spec.Name, "SnatSubnet.Namespace", found_snatip.Spec.Namespace)
-	reqLogger.Info("snat_allocation-3", "SnatSubnet.ResourceType", found_snatip.Spec.Resourcetype)
 
 	return reconcile.Result{}, nil
 }
 
 // newSnatAllocationCR returns a SnatAllocationCR
-func newSnatAllocationCR() *noironetworksv1.SnatAllocation {
+func newSnatAllocationCR(alloc noironetworksv1.SnatAllocationSpec) *noironetworksv1.SnatAllocation {
 
 	return &noironetworksv1.SnatAllocation{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "first",
+			Name:      alloc.Podname + "-snat-alloc",
 			Namespace: "default",
 		},
-		Spec: noironetworksv1.SnatAllocationSpec{
-			Podname: "gaurvpod",
-		},
+		Spec: alloc,
 	}
 }
 
-func (r *ReconcileSnatAllocation) getAllSnatSubnets() (*noironetworksv1.SnatSubnetList, error) {
+func (r *ReconcileSnatAllocation) getAllSnatSubnets() (noironetworksv1.SnatSubnet, error) {
 	snatSubnetList := &noironetworksv1.SnatSubnetList{}
 	err := r.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatSubnetList)
 	if err != nil {
 		log.Error(err, "failed to list existing snatsubnets")
-		return &noironetworksv1.SnatSubnetList{}, err
+		return noironetworksv1.SnatSubnet{}, err
 	}
-	return snatSubnetList, nil
+
+	// We are making sure that there will always be one instance of snatsubnet in the system.
+	return snatSubnetList.Items[0], nil
 }
 
-func (r *ReconcileSnatAllocation) getAllSnatAllocations() (*noironetworksv1.SnatAllocationList, error) {
+func (r *ReconcileSnatAllocation) getAllSnatAllocations() (noironetworksv1.SnatAllocationList, error) {
 	snatAllocationList := &noironetworksv1.SnatAllocationList{}
 	err := r.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatAllocationList)
 	if err != nil {
 		log.Error(err, "failed to list existing SnatAllocationList")
-		return &noironetworksv1.SnatAllocationList{}, err
+		return noironetworksv1.SnatAllocationList{}, err
 	}
-	return snatAllocationList, nil
+	return *snatAllocationList, nil
 }
 
-func (r *ReconcileSnatAllocation) getAllSnatIps() (*noironetworksv1.SnatIPList, error) {
+func (r *ReconcileSnatAllocation) getAllSnatIps() (noironetworksv1.SnatIPList, error) {
 	snatIpList := &noironetworksv1.SnatIPList{}
 	err := r.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatIpList)
 	if err != nil {
 		log.Error(err, "failed to list existing snatsubnets")
-		return &noironetworksv1.SnatIPList{}, err
+		return noironetworksv1.SnatIPList{}, err
 	}
-	return snatIpList, nil
+	return *snatIpList, nil
+}
+
+// Given a name, this function finds snatIP object
+func (r *ReconcileSnatAllocation) SearchSnatIPByName(name string) (*noironetworksv1.SnatIP, error) {
+	instance := &noironetworksv1.SnatIP{}
+	snatipList, err := r.getAllSnatIps()
+	if err != nil {
+		log.Error(err, "failed to list of all snatsubnets")
+		return &noironetworksv1.SnatIP{}, err
+	}
+
+	// Search for `name`
+	for _, item := range snatipList.Items {
+		if item.Spec.Name == name {
+			instance = &item
+			log.Info("SnatIP found", "Spec", instance.Spec)
+			return instance, nil
+		}
+	}
+
+	// Could not find snatip with name, so erroring it out
+	log.Error(err, "Could not find snatip item for", "name", name)
+	return instance, err
+}
+
+func (r *ReconcileSnatAllocation) handlePodEvent(request reconcile.Request) (reconcile.Result, error) {
+	// Podname: nanme of the pod for which loop was triggered
+	// resourceType: type of snatip resource, in which this pod belongs
+	// resourceName: name of the snatip resource, in which this pod belongs
+	podName, _, resourceName := utils.GetPodNameFromReoncileRequest(request.Name)
+
+	// Query this pod using k8s client
+	found_pod := &corev1.Pod{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: request.Namespace}, found_pod)
+	if err != nil && errors.IsNotFound(err) {
+		log.Info("Pod deleted", "PodName:", request.Name)
+		return reconcile.Result{}, err
+	} else if err != nil {
+		return reconcile.Result{}, err
+	}
+	log.Info("********POD found********", "Pod name", found_pod.Name)
+
+	// Get snatsubnet resource
+	snatsubnetItem, err := r.getAllSnatSubnets()
+	if err != nil {
+		log.Error(err, "snatsubnetItem could not be found, resulting an err")
+		return reconcile.Result{}, err
+	}
+	log.Info("SnatSubnet found", "snatSubnet:", snatsubnetItem)
+
+	// Get the snatip resouce in which this pod belongs
+	snatipItem, err := r.SearchSnatIPByName(resourceName)
+	if err != nil {
+		log.Error(err, "snatip item could not be found, resulting an err")
+		return reconcile.Result{}, err
+	}
+
+	ip, portRange, uid := r.getIPPortRangeForPod(*found_pod, *snatipItem, snatsubnetItem)
+	// Create snatAllocation CR
+	spec := noironetworksv1.SnatAllocationSpec{
+		Podname:       found_pod.ObjectMeta.Name,
+		Poduid:        found_pod.ObjectMeta.UID,
+		Nodename:      "minikube",
+		Snatportrange: portRange,
+		Snatip:        ip,
+		Namespace:     "default",
+		Snatipuid:     uid,
+		Macaddress:    "f0:18:98:83:4a:8b",
+	}
+	cr := newSnatAllocationCR(spec)
+	err = r.client.Create(context.TODO(), cr)
+	if err != nil {
+		log.Error(err, "failed to create a snat allocation cr")
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{Requeue: true}, nil
+}
+
+func (r *ReconcileSnatAllocation) getIPPortRangeForPod(pod corev1.Pod, snatIpItem noironetworksv1.SnatIP,
+	snatSubnetItem noironetworksv1.SnatSubnet) (string, snattypes.PortRange, types.UID) {
+
+	if len(snatIpItem.Status.AllIps) <= 0 || len(snatSubnetItem.Status.Expandedsnatports) <= 0 {
+		log.Info("AllIPs can not be empty. Resulting to error")
+		return "", snattypes.PortRange{}, ""
+	}
+
+	allocList, _ := r.getAllSnatAllocations()
+	if len(allocList.Items) == 0 {
+		// No allocation has been done so do first allocation
+		return snatIpItem.Status.AllIps[0], snatSubnetItem.Status.Expandedsnatports[0], uuid.NewUUID()
+	}
+
+	return "", snattypes.PortRange{}, ""
 }

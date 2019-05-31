@@ -18,19 +18,23 @@ func CheckIfPodForService(corev1.Pod, corev1.Service) bool {
 }
 
 // Given a reconcile request name, it extracts out pod name by omiiting snat-<resourcename>- from it
-func GetPodNameFromReoncileRequest(requestName string) string {
-	if strings.HasPrefix(requestName, "snat-namespace-") {
-		return requestName[len("snat-namespace-"):]
+// It also extract out resource type name.
+// eg: snat-namespace-foo-podname -> podname, namespace, foo
+func GetPodNameFromReoncileRequest(requestName string) (string, string, string) {
 
-	} else if strings.HasPrefix(requestName, "snat-pod-") {
-		return requestName[len("snat-pod-"):]
-
-	} else if strings.HasPrefix(requestName, "snat-deployment-") {
-		return requestName[len("snat-deployment-"):]
-
-	} else if strings.HasPrefix(requestName, "snat-service-") {
-		return requestName[len("snat-service-"):]
-	} else {
-		return requestName
+	temp := strings.Split(requestName, "-")
+	if len(temp) != 4 {
+		UtilLog.Info("Length should be 4", "input string:", requestName, "lengthGot", len(temp))
+		return "", "", ""
 	}
+	resourceType, resourceName, podName := temp[1], temp[2], temp[3]
+	return podName, resourceType, resourceName
+}
+
+// Given a reconcile request name, it extracts out node name by omiiting node-event- from it
+func GetNodeNameFromReoncileRequest(requestName string) string {
+	if strings.HasPrefix(requestName, "node-event-") {
+		return requestName[len("node-event-"):]
+	}
+	return requestName
 }
