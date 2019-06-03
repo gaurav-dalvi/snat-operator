@@ -2,7 +2,6 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -15,11 +14,11 @@ type SnatAllocationSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 	Podname       string    `json:"podname"`
-	Poduid        types.UID `json:"poduid"`
+	Poduid        string    `json:"poduid"`
 	Nodename      string    `json:"nodename"`
 	Snatportrange PortRange `json:"snatportrange"`
 	Snatip        string    `json:"snatip"`
-	Snatipuid     types.UID `json:"snatipuid"`
+	Snatipuid     string    `json:"snatipuid"`
 	Namespace     string    `json:"namespace"`
 	Macaddress    string    `json:"macaddress"`
 	Scope         string    `json:"string,omitempty"`

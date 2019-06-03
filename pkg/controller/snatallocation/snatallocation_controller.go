@@ -153,7 +153,7 @@ func (r *ReconcileSnatAllocation) getAllSnatIps() (noironetworksv1.SnatIPList, e
 }
 
 // Given a name, this function finds snatIP object
-func (r *ReconcileSnatAllocation) SearchSnatIPByName(name string) (*noironetworksv1.SnatIP, error) {
+func (r *ReconcileSnatAllocation) SearchSnatIPByName(name, resourceType string) (*noironetworksv1.SnatIP, error) {
 	instance := &noironetworksv1.SnatIP{}
 	snatipList, err := r.getAllSnatIps()
 	if err != nil {
@@ -163,9 +163,8 @@ func (r *ReconcileSnatAllocation) SearchSnatIPByName(name string) (*noironetwork
 
 	// Search for `name`
 	for _, item := range snatipList.Items {
-		if item.Spec.Name == name {
+		if item.Spec.Name == name && item.Spec.Resourcetype == resourceType {
 			instance = &item
-			log.Info("SnatIP found", "Spec", instance.Spec)
 			return instance, nil
 		}
 	}
@@ -175,22 +174,23 @@ func (r *ReconcileSnatAllocation) SearchSnatIPByName(name string) (*noironetwork
 	return instance, err
 }
 
+// This function handles Pod events which are triggering snatallocation's reconcile loop
 func (r *ReconcileSnatAllocation) handlePodEvent(request reconcile.Request) (reconcile.Result, error) {
-	// Podname: nanme of the pod for which loop was triggered
+	// Podname: name of the pod for which loop was triggered
 	// resourceType: type of snatip resource, in which this pod belongs
 	// resourceName: name of the snatip resource, in which this pod belongs
-	podName, _, resourceName := utils.GetPodNameFromReoncileRequest(request.Name)
+	podName, resourceType, resourceName := utils.GetPodNameFromReoncileRequest(request.Name)
 
 	// Query this pod using k8s client
 	found_pod := &corev1.Pod{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: request.Namespace}, found_pod)
 	if err != nil && errors.IsNotFound(err) {
 		log.Info("Pod deleted", "PodName:", request.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, nil
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
-	log.Info("********POD found********", "Pod name", found_pod.Name)
+	log.Info("********POD found********", "Pod name", found_pod.ObjectMeta.Name)
 
 	// Get snatsubnet resource
 	snatsubnetItem, err := r.getAllSnatSubnets()
@@ -200,37 +200,42 @@ func (r *ReconcileSnatAllocation) handlePodEvent(request reconcile.Request) (rec
 	}
 	log.Info("SnatSubnet found", "snatSubnet:", snatsubnetItem)
 
-	// Get the snatip resouce in which this pod belongs
-	snatipItem, err := r.SearchSnatIPByName(resourceName)
+	// Get the snatip resource in which this pod belongs
+	snatipItem, err := r.SearchSnatIPByName(resourceName, resourceType)
 	if err != nil {
 		log.Error(err, "snatip item could not be found, resulting an err")
 		return reconcile.Result{}, err
 	}
+	log.Info("SnatIp found", "snatIp", snatipItem)
 
-	ip, portRange, uid := r.getIPPortRangeForPod(*found_pod, *snatipItem, snatsubnetItem)
-	// Create snatAllocation CR
-	spec := noironetworksv1.SnatAllocationSpec{
-		Podname:       found_pod.ObjectMeta.Name,
-		Poduid:        found_pod.ObjectMeta.UID,
-		Nodename:      "minikube",
-		Snatportrange: portRange,
-		Snatip:        ip,
-		Namespace:     "default",
-		Snatipuid:     uid,
-		Macaddress:    "f0:18:98:83:4a:8b",
-	}
-	cr := newSnatAllocationCR(spec)
-	err = r.client.Create(context.TODO(), cr)
-	if err != nil {
-		log.Error(err, "failed to create a snat allocation cr")
-		return reconcile.Result{}, err
+	ip, portRange, uid := r.getIPPortRangeForPod(*snatipItem, snatsubnetItem)
+	// Create snatallocation CR object only when pod is in `Running` state
+	if found_pod.Status.Phase == "Running" {
+		// Create snatAllocation CR
+		spec := noironetworksv1.SnatAllocationSpec{
+			Podname:       found_pod.ObjectMeta.Name,
+			Poduid:        string(found_pod.ObjectMeta.UID),
+			Nodename:      found_pod.Spec.NodeName,
+			Snatportrange: portRange,
+			Snatip:        ip,
+			Namespace:     found_pod.ObjectMeta.Namespace,
+			Snatipuid:     uid,
+			Macaddress:    "f0:18:98:83:4a:8b",
+		}
+		cr := newSnatAllocationCR(spec)
+		err = r.client.Create(context.TODO(), cr)
+		if err != nil {
+			log.Error(err, "failed to create a snat allocation cr")
+			return reconcile.Result{}, err
+		}
+		log.Info("Created snatallocation object", "Snatallocation", cr)
 	}
 
-	return reconcile.Result{Requeue: true}, nil
+	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileSnatAllocation) getIPPortRangeForPod(pod corev1.Pod, snatIpItem noironetworksv1.SnatIP,
-	snatSubnetItem noironetworksv1.SnatSubnet) (string, snattypes.PortRange, types.UID) {
+func (r *ReconcileSnatAllocation) getIPPortRangeForPod(snatIpItem noironetworksv1.SnatIP,
+	snatSubnetItem noironetworksv1.SnatSubnet) (string, snattypes.PortRange, string) {
 
 	if len(snatIpItem.Status.AllIps) <= 0 || len(snatSubnetItem.Status.Expandedsnatports) <= 0 {
 		log.Info("AllIPs can not be empty. Resulting to error")
@@ -240,8 +245,34 @@ func (r *ReconcileSnatAllocation) getIPPortRangeForPod(pod corev1.Pod, snatIpIte
 	allocList, _ := r.getAllSnatAllocations()
 	if len(allocList.Items) == 0 {
 		// No allocation has been done so do first allocation
-		return snatIpItem.Status.AllIps[0], snatSubnetItem.Status.Expandedsnatports[0], uuid.NewUUID()
+		return snatIpItem.Status.AllIps[0], snatSubnetItem.Status.Expandedsnatports[0], string(uuid.NewUUID())
 	}
 
 	return "", snattypes.PortRange{}, ""
+}
+
+// Delete respective snat-allocation cr object for given pod
+func (r *ReconcileSnatAllocation) deleteSnatAllocationCR(podName, nameSpace string) (reconcile.Result, error) {
+
+	// Get all snatallocation CR objects
+	allocList, err := r.getAllSnatAllocations()
+	if len(allocList.Items) == 0 {
+		// This can not happen. There has to be one entry matching for this pod
+		log.Error(err, "This can not happen. There has to be one entry matching for this pod:", "PodName/Namespace", podName+"/"+nameSpace)
+		return reconcile.Result{}, err
+	}
+
+	for _, item := range allocList.Items {
+		if item.Spec.Podname == podName && item.Spec.Namespace == nameSpace {
+			// Found snatalloc item, deleting it
+			err = r.client.Delete(context.TODO(), &item)
+			if err != nil {
+				log.Error(err, "failed to delete a snatallocation item : "+item.ObjectMeta.Name)
+				return reconcile.Result{}, err
+			}
+			break
+		}
+	}
+
+	return reconcile.Result{}, nil
 }

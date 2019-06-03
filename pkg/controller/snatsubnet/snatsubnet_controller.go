@@ -4,6 +4,8 @@ import (
 	"context"
 	"reflect"
 
+	mapset "github.com/deckarep/golang-set"
+
 	"github.com/gaurav-dalvi/snat-operator/cmd/manager/utils"
 	noironetworksv1 "github.com/gaurav-dalvi/snat-operator/pkg/apis/noironetworks/v1"
 
@@ -72,10 +74,6 @@ func (r *ReconcileSnatSubnet) Reconcile(request reconcile.Request) (reconcile.Re
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// For Snat controller only one object of SnatSubnet has to be present.
-			// If its not then its an error
-			// reqLogger.Error(err, "snatsubnet resource not found")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -124,6 +122,47 @@ func (r *ReconcileSnatSubnet) Reconcile(request reconcile.Request) (reconcile.Re
 			return reconcile.Result{}, err
 		}
 		reqLogger.Info("Updated snatsubnet status", "Status:", instance.Status)
+	}
+
+	// If snatIP resource is using any of the IP in snatSubnet, then check that and send appropriate error
+	// return r.handleSnatSubnetUpdate(*instance)
+	return reconcile.Result{}, nil
+}
+
+// To handle update of snatsubnet resource. If any of the IP  from the status is in use in Snatip resource,
+// then return the error
+func (r *ReconcileSnatSubnet) handleSnatSubnetUpdate(instance noironetworksv1.SnatSubnet) (reconcile.Result, error) {
+	snatIpList := &noironetworksv1.SnatIPList{}
+	err := r.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatIpList)
+	if err != nil {
+		log.Error(err, "Failed to list existing snatip items\n")
+		return reconcile.Result{}, err
+	}
+
+	// All Ip addresses which are using bu snatsubnet resource
+	origAllIps := utils.ExpandCIDRs(instance.Spec.Snatipsubnets)
+	origIPSet := mapset.NewSet()
+	for _, item := range origAllIps {
+		origIPSet.Add(item)
+	}
+	log.Info("Expanded IPs", "OriginalIPs", origIPSet)
+
+	var temp []string
+	// All Ip addresses which are using bu snatIP resources
+	for _, item := range snatIpList.Items {
+		temp = append(temp, item.Status.AllIps...)
+	}
+
+	currIPSet := mapset.NewSet()
+	for _, item := range temp {
+		currIPSet.Add(item)
+	}
+	log.Info("Expanded IPs", "CurrentIPs", currIPSet)
+
+	diffSet := origIPSet.Difference(currIPSet)
+	if diffSet.Difference(currIPSet).Cardinality() != 0 && currIPSet.Cardinality() != 0 {
+		log.Error(err, "Can not delete / update snatsubnet resource as IPs are in use")
+		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil

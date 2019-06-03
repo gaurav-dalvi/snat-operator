@@ -47,7 +47,6 @@ func DrawIP(freeIps []string) {
 // return sorted array(based on IP address) of IP addresses.
 func ExpandCIDRs(currCIDRs []string) []string {
 
-	UtilLog.Info("Inside ExpandCIDRs", "currCIDRs:", currCIDRs)
 	var expandedIPs []string
 	for _, item := range currCIDRs {
 		ips := GetIPsFromCIDR(item)
@@ -56,6 +55,7 @@ func ExpandCIDRs(currCIDRs []string) []string {
 
 	// Sort list of IPs
 	sort.Strings(expandedIPs)
+	UtilLog.Info("Inside ExpandCIDRs", "currCIDRs:", expandedIPs)
 
 	return expandedIPs
 }
