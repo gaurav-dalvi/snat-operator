@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: snat-operator
+  namespace: foo
 spec:
   replicas: 1
   selector:
@@ -11,6 +12,7 @@ spec:
     metadata:
       labels:
         name: snat-operator
+      namespace: foo
     spec:
       serviceAccountName: snat-operator
       containers:

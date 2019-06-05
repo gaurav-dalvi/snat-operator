@@ -3,6 +3,7 @@ kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: snat-operator
+  namespace: foo
 rules:
 - apiGroups:
   - ""
@@ -42,7 +43,7 @@ rules:
   verbs:
   - update
 - apiGroups:
-  - noironetworks.com
+  - aci.snat
   resources:
   - '*'
   - snatips
