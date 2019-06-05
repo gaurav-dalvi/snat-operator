@@ -1,0 +1,89 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: snatsubnets.aci.snat
+spec:
+  group: aci.snat
+  names:
+    kind: SnatSubnet
+    listKind: SnatSubnetList
+    plural: snatsubnets
+    singular: snatsubnet
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            pernodeports:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "operator-sdk generate k8s" to regenerate code after
+                modifying this file Add custom validation using kubebuilder tags:
+                https://book.kubebuilder.io/beyond_basics/generating_crd.html'
+              format: int64
+              type: integer
+            snatipsubnets:
+              items:
+                type: string
+              type: array
+            snatports:
+              items:
+                properties:
+                  end:
+                    format: int64
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  start:
+                    format: int64
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                type: object
+              type: array
+          required:
+          - pernodeports
+          - snatipsubnets
+          - snatports
+          type: object
+        status:
+          properties:
+            expandedsnatports:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "operator-sdk generate k8s" to regenerate
+                code after modifying this file Add custom validation using kubebuilder
+                tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
+              items:
+                properties:
+                  end:
+                    format: int64
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  start:
+                    format: int64
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                type: object
+              type: array
+          required:
+          - expandedsnatports
+          type: object
+  version: v1
+  versions:
+  - name: v1
+    served: true
+    storage: true

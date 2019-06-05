@@ -1,0 +1,19 @@
+apiVersion: aci.snat/v1
+kind: SnatSubnet
+metadata:
+  name: foo
+spec:
+  pernodeports: 1000
+  snatipsubnets: 
+    - 10.0.0.0/24
+    - 20.0.0.0/24
+  snatports: 
+    - 
+      end: 10000
+      start: 1000
+    # - 
+    #   end: 20000
+    #   start: 10001
+    # - 
+    #   end: 65000
+    #   start: 20001

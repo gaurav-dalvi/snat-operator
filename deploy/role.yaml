@@ -1,6 +1,7 @@
-kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
+  creationTimestamp: null
   name: snat-operator
 rules:
 - apiGroups:
@@ -13,8 +14,9 @@ rules:
   - events
   - configmaps
   - secrets
+  - nodes
   verbs:
-  - "*"
+  - '*'
 - apiGroups:
   - apps
   resources:
@@ -23,19 +25,27 @@ rules:
   - replicasets
   - statefulsets
   verbs:
-  - "*"
+  - '*'
 - apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors
   verbs:
-  - "get"
-  - "create"
+  - get
+  - create
 - apiGroups:
   - apps
-  resources:
-  - deployments/finalizers
   resourceNames:
   - snat-operator
+  resources:
+  - deployments/finalizers
   verbs:
-  - "update"
+  - update
+- apiGroups:
+  - noironetworks.com
+  resources:
+  - '*'
+  - snatips
+  - snatallocations
+  verbs:
+  - '*'

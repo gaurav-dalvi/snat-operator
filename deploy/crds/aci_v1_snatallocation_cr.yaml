@@ -1,0 +1,16 @@
+apiVersion: aci.snat/v1
+kind: SnatAllocation
+metadata:
+  name: example-snatallocation
+spec:
+    podname: gauravpod
+    nodename: minikube
+    snatport_range:
+      start: 1000
+      end: 2000
+    snatip: 10.20.30.40
+    namespace: default
+    macaddress: abcd
+    #optional
+    scope: pod
+      
