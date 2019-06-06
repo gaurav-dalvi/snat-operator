@@ -283,7 +283,6 @@ func schema_pkg_apis_aci_v1_SnatIPStatus(ref common.ReferenceCallback) common.Op
 						},
 					},
 				},
-				Required: []string{"allips"},
 			},
 		},
 		Dependencies: []string{},

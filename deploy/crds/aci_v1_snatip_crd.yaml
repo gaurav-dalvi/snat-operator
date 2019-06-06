@@ -58,8 +58,6 @@ spec:
               items:
                 type: string
               type: array
-          required:
-          - allips
           type: object
   version: v1
   versions:

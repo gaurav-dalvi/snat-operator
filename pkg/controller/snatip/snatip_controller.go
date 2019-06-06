@@ -18,6 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const snatipFinalizer = "finalizer.snatip.aci.snat"
+
 var log = logf.Log.WithName("controller_snatip")
 
 /**
@@ -89,6 +91,27 @@ func (r *ReconcileSnatIP) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{}, err
 	}
 	reqLogger.Info("snatip-controller", "resourcetype", instance.Spec.Resourcetype, "name", instance.Spec.Name)
+	// Check if the APP CR was marked to be deleted
+	isSnatIPToBeDeleted := instance.GetDeletionTimestamp() != nil
+	if isSnatIPToBeDeleted {
+		if utils.Contains(instance.GetFinalizers(), snatipFinalizer) {
+			// Run finalization logic for memcachedFinalizer. If the
+			// finalization logic fails, don't remove the finalizer so
+			// that we can retry during the next reconciliation.
+			if err := r.finalizeSnatIP(instance); err != nil {
+				return reconcile.Result{}, err
+			}
+
+			// Remove memcachedFinalizer. Once all finalizers have been
+			// removed, the object will be deleted.
+			instance.SetFinalizers(utils.Remove(instance.GetFinalizers(), snatipFinalizer))
+			err := r.client.Update(context.TODO(), instance)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		return reconcile.Result{}, nil
+	}
 
 	// Validation of SnatIPSpec struct
 	validator := utils.Validator{}
@@ -96,6 +119,13 @@ func (r *ReconcileSnatIP) Reconcile(request reconcile.Request) (reconcile.Result
 	if !validator.Validated {
 		reqLogger.Error(err, "SnatIPSpec is not valid - "+validator.ErrorMessage)
 		return reconcile.Result{}, err
+	}
+
+	// Add finalizer for this CR
+	if !utils.Contains(instance.GetFinalizers(), snatipFinalizer) {
+		if err := r.addFinalizer(instance); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// Update the status if necessary
@@ -111,4 +141,24 @@ func (r *ReconcileSnatIP) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileSnatIP) finalizeSnatIP(m *aciv1.SnatIP) error {
+	// TODO(user): Add the cleanup steps that the operator
+	// needs to do before the CR can be deleted
+	log.Info("Successfully finalized memcached")
+	return nil
+}
+
+func (r *ReconcileSnatIP) addFinalizer(m *aciv1.SnatIP) error {
+	log.Info("Adding Finalizer for the Memcached")
+	m.SetFinalizers(append(m.GetFinalizers(), snatipFinalizer))
+
+	// Update CR
+	err := r.client.Update(context.TODO(), m)
+	if err != nil {
+		log.Error(err, "Failed to update Memcached with finalizer")
+		return err
+	}
+	return nil
 }
