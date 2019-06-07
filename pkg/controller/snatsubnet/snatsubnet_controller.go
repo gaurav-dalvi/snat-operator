@@ -1,14 +1,16 @@
 package snatsubnet
 
 import (
+	"bytes"
 	"context"
+	"net"
 	"reflect"
 
 	mapset "github.com/deckarep/golang-set"
-
 	"github.com/gaurav-dalvi/snat-operator/cmd/manager/utils"
 	aciv1 "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,6 +21,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+const snatsubnetFinalizer = "finalizer.snatsubnet.aci.snat"
 
 var log = logf.Log.WithName("controller_snatsubnet")
 
@@ -80,12 +84,41 @@ func (r *ReconcileSnatSubnet) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
+	// Check if the snatsubnet cr was marked to be deleted
+	isSnatSubnetToBeDeleted := instance.GetDeletionTimestamp() != nil
+	if isSnatSubnetToBeDeleted {
+		if utils.Contains(instance.GetFinalizers(), snatsubnetFinalizer) {
+			// Run finalization logic for snatsubnetFinalizer. If the
+			// finalization logic fails, don't remove the finalizer so
+			// that we can retry during the next reconciliation.
+			if err := r.finalizeSnatSubnet(reqLogger, instance); err != nil {
+				return reconcile.Result{}, err
+			}
+
+			// Remove snatsubnetFinalizer. Once all finalizers have been
+			// removed, the object will be deleted.
+			instance.SetFinalizers(utils.Remove(instance.GetFinalizers(), snatsubnetFinalizer))
+			err := r.client.Update(context.TODO(), instance)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		return reconcile.Result{}, nil
+	}
+
 	// Validation of SnatSpec struct
 	validator := utils.Validator{}
 	validator.ValidateSnatSubnet(instance)
 	if !validator.Validated {
 		reqLogger.Error(err, "SnatSpec is not valid - "+validator.ErrorMessage)
 		return reconcile.Result{}, err
+	}
+
+	// Add finalizer for this CR
+	if !utils.Contains(instance.GetFinalizers(), snatsubnetFinalizer) {
+		if err := r.addFinalizer(instance); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// Only one instance of SnatSubnet object has to be present in the system.
@@ -124,9 +157,71 @@ func (r *ReconcileSnatSubnet) Reconcile(request reconcile.Request) (reconcile.Re
 		reqLogger.Info("Updated snatsubnet status", "Status:", instance.Status)
 	}
 
+	// In case of update (deletion of subnets which are currently used by snatip)
+	if err := r.finalizeSnatSubnet(reqLogger, instance); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// If snatIP resource is using any of the IP in snatSubnet, then check that and send appropriate error
 	// return r.handleSnatSubnetUpdate(*instance)
 	return reconcile.Result{}, nil
+}
+
+// Cleanup steps to be done when snatsubnet resource is getting deleted.
+// This will delete all the matching snatip CRs which had
+// IPs from this snatip resource
+func (r *ReconcileSnatSubnet) finalizeSnatSubnet(reqLogger logr.Logger, m *aciv1.SnatSubnet) error {
+	// TODO(user): Add the cleanup steps that the operator
+	// needs to do before the CR can be deleted
+
+	// Get all snatip CRs
+	snatIPList, err := utils.GetAllSnatIps(r.client)
+	if err != nil {
+		reqLogger.Error(err, "snatsubnet CR could not found")
+		return err
+	}
+
+	// Check if snatsubnet's CIDR and snatIP's CIDR are subset of each other or not
+	for _, item := range m.Spec.Snatipsubnets {
+		bIp, _, bErr := net.ParseCIDR(item)
+		if bErr != nil {
+			reqLogger.Error(err, "Invalid bigger CIDR", "CIDR", item)
+			return nil
+		}
+		for _, snatip := range snatIPList.Items {
+			for _, ip := range snatip.Spec.Snatipsubnets {
+				sIp, _, sErr := net.ParseCIDR(ip)
+				if sErr != nil {
+					reqLogger.Error(err, "Invalid smaller CIDR", "CIDR", item)
+					return nil
+				}
+				if bytes.Equal(bIp, sIp) {
+					// Add it to set so that we can delete all the snatip objects later
+					err := utils.DeleteSnatIPCR(snatip.ObjectMeta.Name, r.client)
+					if err != nil {
+						reqLogger.Error(err, "Could not find snatip IP", "Name", item)
+					}
+				}
+			}
+		}
+
+	}
+	reqLogger.Info("Successfully finalized snatsubnet")
+	return nil
+}
+
+// Add finalizer string to snatsubnet resource to run cleanup logic on delete
+func (r *ReconcileSnatSubnet) addFinalizer(m *aciv1.SnatSubnet) error {
+	log.Info("Adding Finalizer for the SnatSubnet")
+	m.SetFinalizers(append(m.GetFinalizers(), snatsubnetFinalizer))
+
+	// Update CR
+	err := r.client.Update(context.TODO(), m)
+	if err != nil {
+		log.Error(err, "Failed to update SnatSubnet with finalizer")
+		return err
+	}
+	return nil
 }
 
 // To handle update of snatsubnet resource. If any of the IP  from the status is in use in Snatip resource,

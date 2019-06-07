@@ -6,13 +6,11 @@ import (
 
 	"github.com/gaurav-dalvi/snat-operator/cmd/manager/utils"
 	aciv1 "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
-	snattypes "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -119,60 +117,6 @@ func newSnatAllocationCR(alloc aciv1.SnatAllocationSpec) *aciv1.SnatAllocation {
 	}
 }
 
-func (r *ReconcileSnatAllocation) getAllSnatSubnets() (aciv1.SnatSubnet, error) {
-	snatSubnetList := &aciv1.SnatSubnetList{}
-	err := r.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatSubnetList)
-	if err != nil {
-		log.Error(err, "failed to list existing snatsubnets")
-		return aciv1.SnatSubnet{}, err
-	}
-
-	// We are making sure that there will always be one instance of snatsubnet in the system.
-	return snatSubnetList.Items[0], nil
-}
-
-func (r *ReconcileSnatAllocation) getAllSnatAllocations() (aciv1.SnatAllocationList, error) {
-	snatAllocationList := &aciv1.SnatAllocationList{}
-	err := r.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatAllocationList)
-	if err != nil {
-		log.Error(err, "failed to list existing SnatAllocationList")
-		return aciv1.SnatAllocationList{}, err
-	}
-	return *snatAllocationList, nil
-}
-
-func (r *ReconcileSnatAllocation) getAllSnatIps() (aciv1.SnatIPList, error) {
-	snatIpList := &aciv1.SnatIPList{}
-	err := r.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatIpList)
-	if err != nil {
-		log.Error(err, "failed to list existing snatsubnets")
-		return aciv1.SnatIPList{}, err
-	}
-	return *snatIpList, nil
-}
-
-// Given a name, this function finds snatIP object
-func (r *ReconcileSnatAllocation) SearchSnatIPByName(name, resourceType string) (*aciv1.SnatIP, error) {
-	instance := &aciv1.SnatIP{}
-	snatipList, err := r.getAllSnatIps()
-	if err != nil {
-		log.Error(err, "failed to list of all snatsubnets")
-		return &aciv1.SnatIP{}, err
-	}
-
-	// Search for `name`
-	for _, item := range snatipList.Items {
-		if item.Spec.Name == name && item.Spec.Resourcetype == resourceType {
-			instance = &item
-			return instance, nil
-		}
-	}
-
-	// Could not find snatip with name, so erroring it out
-	log.Error(err, "Could not find snatip item for", "name", name)
-	return instance, err
-}
-
 // This function handles Pod events which are triggering snatallocation's reconcile loop
 func (r *ReconcileSnatAllocation) handlePodEvent(request reconcile.Request) (reconcile.Result, error) {
 	// Podname: name of the pod for which loop was triggered
@@ -192,7 +136,7 @@ func (r *ReconcileSnatAllocation) handlePodEvent(request reconcile.Request) (rec
 	log.Info("********POD found********", "Pod name", found_pod.ObjectMeta.Name)
 
 	// Get snatsubnet resource
-	snatsubnetItem, err := r.getAllSnatSubnets()
+	snatsubnetItem, err := utils.GetAllSnatSubnets(r.client)
 	if err != nil {
 		log.Error(err, "snatsubnetItem could not be found, resulting an err")
 		return reconcile.Result{}, err
@@ -200,14 +144,14 @@ func (r *ReconcileSnatAllocation) handlePodEvent(request reconcile.Request) (rec
 	log.Info("SnatSubnet found", "snatSubnet:", snatsubnetItem)
 
 	// Get the snatip resource in which this pod belongs
-	snatipItem, err := r.SearchSnatIPByName(resourceName, resourceType)
+	snatipItem, err := utils.SearchSnatIPByName(resourceName, resourceType, r.client)
 	if err != nil {
 		log.Error(err, "snatip item could not be found, resulting an err")
 		return reconcile.Result{}, err
 	}
 	log.Info("SnatIp found", "snatIp", snatipItem)
 
-	ip, portRange, uid := r.getIPPortRangeForPod(*snatipItem, snatsubnetItem)
+	ip, portRange, uid := utils.GetIPPortRangeForPod(*snatipItem, snatsubnetItem, r.client)
 	// Create snatallocation CR object only when pod is in `Running` state
 	if found_pod.Status.Phase == "Running" {
 		// Create snatAllocation CR
@@ -228,49 +172,6 @@ func (r *ReconcileSnatAllocation) handlePodEvent(request reconcile.Request) (rec
 			return reconcile.Result{}, err
 		}
 		log.Info("Created snatallocation object", "Snatallocation", cr)
-	}
-
-	return reconcile.Result{}, nil
-}
-
-func (r *ReconcileSnatAllocation) getIPPortRangeForPod(snatIpItem aciv1.SnatIP,
-	snatSubnetItem aciv1.SnatSubnet) (string, snattypes.PortRange, string) {
-
-	if len(snatIpItem.Status.Allips) <= 0 || len(snatSubnetItem.Status.Expandedsnatports) <= 0 {
-		log.Info("Allips can not be empty. Resulting to error")
-		return "", snattypes.PortRange{}, ""
-	}
-
-	allocList, _ := r.getAllSnatAllocations()
-	if len(allocList.Items) == 0 {
-		// No allocation has been done so do first allocation
-		return snatIpItem.Status.Allips[0], snatSubnetItem.Status.Expandedsnatports[0], string(uuid.NewUUID())
-	}
-
-	return "", snattypes.PortRange{}, ""
-}
-
-// Delete respective snat-allocation cr object for given pod
-func (r *ReconcileSnatAllocation) deleteSnatAllocationCR(podName, nameSpace string) (reconcile.Result, error) {
-
-	// Get all snatallocation CR objects
-	allocList, err := r.getAllSnatAllocations()
-	if len(allocList.Items) == 0 {
-		// This can not happen. There has to be one entry matching for this pod
-		log.Error(err, "This can not happen. There has to be one entry matching for this pod:", "PodName/Namespace", podName+"/"+nameSpace)
-		return reconcile.Result{}, err
-	}
-
-	for _, item := range allocList.Items {
-		if item.Spec.Podname == podName && item.Spec.Namespace == nameSpace {
-			// Found snatalloc item, deleting it
-			err = r.client.Delete(context.TODO(), &item)
-			if err != nil {
-				log.Error(err, "failed to delete a snatallocation item : "+item.ObjectMeta.Name)
-				return reconcile.Result{}, err
-			}
-			break
-		}
 	}
 
 	return reconcile.Result{}, nil

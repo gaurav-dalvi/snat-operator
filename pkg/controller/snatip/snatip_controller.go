@@ -7,6 +7,7 @@ import (
 	"github.com/gaurav-dalvi/snat-operator/cmd/manager/utils"
 	aciv1 "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -84,25 +85,25 @@ func (r *ReconcileSnatIP) Reconcile(request reconcile.Request) (reconcile.Result
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			// reqLogger.Error(err, "snatip resource not found")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
 	reqLogger.Info("snatip-controller", "resourcetype", instance.Spec.Resourcetype, "name", instance.Spec.Name)
-	// Check if the APP CR was marked to be deleted
+
+	// Check if the snatip cr was marked to be deleted
 	isSnatIPToBeDeleted := instance.GetDeletionTimestamp() != nil
 	if isSnatIPToBeDeleted {
 		if utils.Contains(instance.GetFinalizers(), snatipFinalizer) {
-			// Run finalization logic for memcachedFinalizer. If the
+			// Run finalization logic for snatipFinalizer. If the
 			// finalization logic fails, don't remove the finalizer so
 			// that we can retry during the next reconciliation.
-			if err := r.finalizeSnatIP(instance); err != nil {
+			if err := r.finalizeSnatIP(reqLogger, instance); err != nil {
 				return reconcile.Result{}, err
 			}
 
-			// Remove memcachedFinalizer. Once all finalizers have been
+			// Remove snatipFinalizer. Once all finalizers have been
 			// removed, the object will be deleted.
 			instance.SetFinalizers(utils.Remove(instance.GetFinalizers(), snatipFinalizer))
 			err := r.client.Update(context.TODO(), instance)
@@ -143,21 +144,49 @@ func (r *ReconcileSnatIP) Reconcile(request reconcile.Request) (reconcile.Result
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileSnatIP) finalizeSnatIP(m *aciv1.SnatIP) error {
+// Cleanup steps to be done when snatip resource is getting deleted.
+// This will delete all the matching snatallocations CRs which had
+// IPs from this snatip resource
+func (r *ReconcileSnatIP) finalizeSnatIP(reqLogger logr.Logger, m *aciv1.SnatIP) error {
 	// TODO(user): Add the cleanup steps that the operator
 	// needs to do before the CR can be deleted
-	log.Info("Successfully finalized memcached")
+
+	// Get all snatallocation CRs
+	allocList, err := utils.GetAllSnatAllocations(r.client)
+	if err != nil {
+		reqLogger.Error(err, "snat allocations could not found")
+		return err
+	}
+	if len(allocList.Items) == 0 {
+		reqLogger.Info("No snatallocation CR present in the system")
+		return nil
+	}
+
+	// Delete snatallocation CR if there is matching IP in snatIP CR
+	for _, item := range allocList.Items {
+		if utils.Contains(m.Status.Allips, item.Spec.Snatip) {
+			// Delete snatallocation CR
+			err := utils.DeleteSnatAllocationCR(item.Spec.Podname, item.Spec.Namespace, r.client)
+			if err != nil {
+				reqLogger.Error(err, "snat allocation can not be deleted", "name", item.Spec.Podname+"/"+item.Spec.Namespace)
+				return err
+			}
+		}
+	}
+
+	reqLogger.Info("Successfully finalized snatip")
 	return nil
 }
 
+// Add finalizer string to snatip resource to run cleanup logic on delete
 func (r *ReconcileSnatIP) addFinalizer(m *aciv1.SnatIP) error {
-	log.Info("Adding Finalizer for the Memcached")
+	log.Info("Adding Finalizer for the SnatIP")
 	m.SetFinalizers(append(m.GetFinalizers(), snatipFinalizer))
 
 	// Update CR
 	err := r.client.Update(context.TODO(), m)
 	if err != nil {
-		log.Error(err, "Failed to update Memcached with finalizer")
+		log.Error(err, "Failed to update SnatIP with finalizer")
 		return err
 	}
 	return nil

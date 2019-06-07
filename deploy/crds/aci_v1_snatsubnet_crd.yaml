@@ -79,8 +79,6 @@ spec:
                     type: integer
                 type: object
               type: array
-          required:
-          - expandedsnatports
           type: object
   version: v1
   versions:

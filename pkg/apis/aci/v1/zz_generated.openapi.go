@@ -399,7 +399,6 @@ func schema_pkg_apis_aci_v1_SnatSubnetStatus(ref common.ReferenceCallback) commo
 						},
 					},
 				},
-				Required: []string{"expandedsnatports"},
 			},
 		},
 		Dependencies: []string{

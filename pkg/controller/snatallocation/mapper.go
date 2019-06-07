@@ -35,8 +35,7 @@ func (h *handlePodsForPodsMapper) Map(obj handler.MapObject) []reconcile.Request
 	if err := h.client.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatipList); err != nil {
 		return nil
 	}
-	// if err := h.client.List(context.TODO(), client.InNamespace(pod.Namespace), snatipList); err != nil {
-	// reqLogger.Info(" map pod function", "SnatIp list is:", snatipList)
+
 	requests := FilterPodsPerSnatIP(snatipList, pod)
 	return requests
 }
