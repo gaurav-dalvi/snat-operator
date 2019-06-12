@@ -41,6 +41,14 @@ spec:
               type: string
             poduid:
               type: string
+            protocols:
+              items:
+                enum:
+                - tcp
+                - udp
+                - icmp
+                type: string
+              type: array
             scope:
               type: string
             snatip:
@@ -69,6 +77,7 @@ spec:
           - snatipuid
           - namespace
           - macaddress
+          - protocols
           type: object
         status:
           type: object

@@ -19,6 +19,8 @@ type SnatIPSpec struct {
 	Name          string   `json:"name"`
 	Namespace     string   `json:"namespace"`
 	Snatipsubnets []string `json:"snatipsubnets"`
+	// +kubebuilder:validation:Enum=tcp,udp,icmp
+	Protocols []string `json:"protocols,omitempty"`
 }
 
 // SnatIPStatus defines the observed state of SnatIP

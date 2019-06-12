@@ -3,6 +3,7 @@ package snatallocation
 import (
 	"context"
 
+	"github.com/gaurav-dalvi/snat-operator/cmd/manager/utils"
 	aciv1 "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,7 +37,7 @@ func (h *handlePodsForPodsMapper) Map(obj handler.MapObject) []reconcile.Request
 		return nil
 	}
 
-	requests := FilterPodsPerSnatIP(snatipList, pod)
+	requests := FilterPodsPerSnatIP(h.client, snatipList, pod)
 	return requests
 }
 
@@ -49,7 +50,7 @@ func HandlePodsForPodsMapper(client client.Client, predicates []predicate.Predic
 Given a list of SnatIp CR, this function filters out whether the pod should be included in reconcile request of
 Map or not, based on CR spec of SnatIP from the list
 */
-func FilterPodsPerSnatIP(snatipList *aciv1.SnatIPList, pod *corev1.Pod) []reconcile.Request {
+func FilterPodsPerSnatIP(c client.Client, snatipList *aciv1.SnatIPList, pod *corev1.Pod) []reconcile.Request {
 	var requests []reconcile.Request
 
 Loop:
@@ -57,7 +58,7 @@ Loop:
 		switch item.Spec.Resourcetype {
 		// Because service has the highest priority among all SnatIp resources. refer SNAT spec for more details
 		// case "service":
-		// 	if item.Spec.Name == pod.Name {
+		// 	if item.Spec.Namespace == pod.Namespace {
 		// 		requests = append(requests, reconcile.Request{
 		// 			NamespacedName: types.NamespacedName{
 		// 				Namespace: item.Namespace,
@@ -67,27 +68,31 @@ Loop:
 		//      break Loop
 		// 	}
 
-		// case "deployment":
-		// 	if item.Spec.Name == pod.ObjectMeta.Namespace {
-		// 		requests = append(requests, reconcile.Request{
-		// 			NamespacedName: types.NamespacedName{
-		// 				Namespace: item.Namespace,
-		//				Name:      "snat-deployment-" + item.Spec.Name + "-" + pod.Name,
-		// 			},
-		// 		})
-		//      break Loop
-		// 	}
+		case "deployment":
+			MapperLog.Info("Deployment Mapper Items: ", "snatip", item.Spec.Name+"---"+item.Spec.Namespace+"--------"+item.Spec.Resourcetype)
+			if item.Spec.Namespace == pod.ObjectMeta.Namespace {
+				ret, err := utils.CheckIfPodForDeployment(c, *pod, item.Spec.Name, item.Spec.Namespace)
+				if err != nil && ret {
+					requests = append(requests, reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Namespace: item.Namespace,
+							Name:      "snat-deployment-" + item.Spec.Name + "-" + pod.Name,
+						},
+					})
+				}
+				break Loop
+			}
 
-		// case "pod":
-		// 	if item.Spec.Name == pod.Name {
-		// 		requests = append(requests, reconcile.Request{
-		// 			NamespacedName: types.NamespacedName{
-		// 				Namespace: item.Namespace,
-		// 				Name:      "snat-pod-" + item.Spec.Name + "-" + pod.Name,
-		// 			},
-		// 		})
-		//      break Loop
-		// 	}
+		case "pod":
+			if item.Spec.Name == pod.ObjectMeta.Name && item.Spec.Namespace == pod.ObjectMeta.Namespace {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: item.Namespace,
+						Name:      "snat-pod-" + item.Spec.Name + "-" + pod.Name,
+					},
+				})
+				break Loop
+			}
 
 		case "namespace":
 			MapperLog.Info("Pod Mapper Items: ", "snatip", item.Spec.Name+"---"+item.Spec.Namespace+"--------"+item.Spec.Resourcetype)

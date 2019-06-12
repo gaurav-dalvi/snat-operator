@@ -31,6 +31,14 @@ spec:
               type: string
             namespace:
               type: string
+            protocols:
+              items:
+                enum:
+                - tcp
+                - udp
+                - icmp
+                type: string
+              type: array
             resourcetype:
               enum:
               - pod

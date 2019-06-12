@@ -164,6 +164,7 @@ func (r *ReconcileSnatAllocation) handlePodEvent(request reconcile.Request) (rec
 			Namespace:     found_pod.ObjectMeta.Namespace,
 			Snatipuid:     uid,
 			Macaddress:    "f0:18:98:83:4a:8b",
+			Protocols:     []string{"tcp", "udp"},
 		}
 		cr := newSnatAllocationCR(spec)
 		err = r.client.Create(context.TODO(), cr)

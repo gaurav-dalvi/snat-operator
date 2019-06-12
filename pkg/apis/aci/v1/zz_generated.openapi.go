@@ -147,6 +147,19 @@ func schema_pkg_apis_aci_v1_SnatAllocationSpec(ref common.ReferenceCallback) com
 							Format: "",
 						},
 					},
+					"protocols": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 					"scope": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -154,7 +167,7 @@ func schema_pkg_apis_aci_v1_SnatAllocationSpec(ref common.ReferenceCallback) com
 						},
 					},
 				},
-				Required: []string{"podname", "poduid", "nodename", "snatportrange", "snatip", "snatipuid", "namespace", "macaddress"},
+				Required: []string{"podname", "poduid", "nodename", "snatportrange", "snatip", "snatipuid", "namespace", "macaddress", "protocols"},
 			},
 		},
 		Dependencies: []string{
@@ -242,6 +255,19 @@ func schema_pkg_apis_aci_v1_SnatIPSpec(ref common.ReferenceCallback) common.Open
 						},
 					},
 					"snatipsubnets": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"protocols": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -365,6 +391,19 @@ func schema_pkg_apis_aci_v1_SnatSubnetSpec(ref common.ReferenceCallback) common.
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.PortRange"),
+									},
+								},
+							},
+						},
+					},
+					"protocols": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
 									},
 								},
 							},

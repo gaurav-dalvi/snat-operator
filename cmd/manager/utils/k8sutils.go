@@ -10,13 +10,36 @@ import (
 	// nodeinfotypes "github.com/gaurav-dalvi/aci-containers/pkg/nodeinfo/apis/aci.nodeinfo/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Check if given pod belongs to given deployment or not
-func CheckIfPodForDeployment(corev1.Pod, appsv1.Deployment) bool {
-	return true
+func CheckIfPodForDeployment(c client.Client, pod corev1.Pod, deploymentName, deploymentNamespace string) (bool, error) {
+
+	// Get the deployment
+	deployment := &appsv1.Deployment{}
+	err := c.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: deploymentNamespace}, deployment)
+	if err != nil {
+		UtilLog.Error(err, "Deployment deleted, name: "+deploymentName)
+		return false, err
+	}
+
+	// Check if  any of the deployment lable is present in pod's label or not
+	UtilLog.Info("Deployment labels", "Label", deployment.ObjectMeta.Labels)
+	UtilLog.Info("Pod labels", "Label", pod.ObjectMeta.Labels)
+	for dKey, dVal := range deployment.ObjectMeta.Labels {
+		for pKey, pVal := range pod.ObjectMeta.Labels {
+			if dKey == pKey && dVal == pVal {
+				// Match found.
+				UtilLog.Info("Labels matched", "Deployment label", dKey+"="+dVal, "PodLabel", pKey+"="+pVal)
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }
 
 // Check if given pod belongs to given service or not

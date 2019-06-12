@@ -34,6 +34,14 @@ spec:
                 https://book.kubebuilder.io/beyond_basics/generating_crd.html'
               format: int64
               type: integer
+            protocols:
+              items:
+                enum:
+                - tcp
+                - udp
+                - icmp
+                type: string
+              type: array
             snatipsubnets:
               items:
                 type: string

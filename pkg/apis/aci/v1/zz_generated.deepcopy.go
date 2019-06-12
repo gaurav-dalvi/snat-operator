@@ -29,7 +29,7 @@ func (in *SnatAllocation) DeepCopyInto(out *SnatAllocation) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	out.Spec = in.Spec
+	in.Spec.DeepCopyInto(&out.Spec)
 	out.Status = in.Status
 	return
 }
@@ -89,6 +89,11 @@ func (in *SnatAllocationList) DeepCopyObject() runtime.Object {
 func (in *SnatAllocationSpec) DeepCopyInto(out *SnatAllocationSpec) {
 	*out = *in
 	out.Snatportrange = in.Snatportrange
+	if in.Protocols != nil {
+		in, out := &in.Protocols, &out.Protocols
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
@@ -184,6 +189,11 @@ func (in *SnatIPSpec) DeepCopyInto(out *SnatIPSpec) {
 	*out = *in
 	if in.Snatipsubnets != nil {
 		in, out := &in.Snatipsubnets, &out.Snatipsubnets
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.Protocols != nil {
+		in, out := &in.Protocols, &out.Protocols
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
@@ -293,6 +303,11 @@ func (in *SnatSubnetSpec) DeepCopyInto(out *SnatSubnetSpec) {
 	if in.Snatports != nil {
 		in, out := &in.Snatports, &out.Snatports
 		*out = make([]PortRange, len(*in))
+		copy(*out, *in)
+	}
+	if in.Protocols != nil {
+		in, out := &in.Protocols, &out.Protocols
+		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
 	return

@@ -16,6 +16,8 @@ type SnatSubnetSpec struct {
 	Pernodeports  int         `json:"pernodeports"`
 	Snatipsubnets []string    `json:"snatipsubnets"`
 	Snatports     []PortRange `json:"snatports"`
+	// +kubebuilder:validation:Enum=tcp,udp,icmp
+	Protocols []string `json:"protocols,omitempty"`
 }
 
 // SnatSubnetStatus defines the observed state of SnatSubnet

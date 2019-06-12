@@ -21,7 +21,9 @@ type SnatAllocationSpec struct {
 	Snatipuid     string    `json:"snatipuid"`
 	Namespace     string    `json:"namespace"`
 	Macaddress    string    `json:"macaddress"`
-	Scope         string    `json:"scope,omitempty"`
+	// +kubebuilder:validation:Enum=tcp,udp,icmp
+	Protocols []string `json:"protocols"`
+	Scope     string   `json:"scope,omitempty"`
 }
 
 // SnatAllocationStatus defines the observed state of SnatAllocation
