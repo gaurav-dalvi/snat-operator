@@ -22,7 +22,7 @@ type Validator struct {
 // Validate validates SnatSubnet Custom Resource
 func (v *Validator) ValidateSnatSubnet(cr *aciv1.SnatSubnet) {
 	v.Validated = true
-
+	reservedPorts := GetReservedPortRanges()
 	for _, item := range cr.Spec.Snatipsubnets {
 		_, _, err := net.ParseCIDR(item)
 		if err != nil {
@@ -46,6 +46,17 @@ func (v *Validator) ValidateSnatSubnet(cr *aciv1.SnatSubnet) {
 			v.Validated = false
 		}
 	}
+
+	// To check if any port from the given range falls into reserved port range or not
+	for _, port_range := range cr.Spec.Snatports {
+		for _, rPort := range reservedPorts {
+			if inBetween(rPort.Start, port_range.Start, port_range.End) || inBetween(rPort.End, port_range.Start, port_range.End) {
+				v.ErrorMessage = v.ErrorMessage + "Port can not be from reserved port ranges\n"
+				v.Validated = false
+			}
+		}
+	}
+
 }
 
 // Validate validates SnatIP Custom Resource
@@ -71,4 +82,11 @@ func (v *Validator) ValidateSnatIP(cr *aciv1.SnatIP) {
 		v.ErrorMessage = v.ErrorMessage + "Invalid resourcetype\n"
 		v.Validated = false
 	}
+}
+
+func inBetween(num, min, max int) bool {
+	if num >= min && num <= max {
+		return true
+	}
+	return false
 }

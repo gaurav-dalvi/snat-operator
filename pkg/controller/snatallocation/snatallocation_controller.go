@@ -154,6 +154,11 @@ func (r *ReconcileSnatAllocation) handlePodEvent(request reconcile.Request) (rec
 	ip, portRange, uid := utils.GetIPPortRangeForPod(*snatipItem, snatsubnetItem, r.client)
 	// Create snatallocation CR object only when pod is in `Running` state
 	if found_pod.Status.Phase == "Running" {
+		nodeInfoObj, err := utils.GetNodeInfoCRObject(r.client, found_pod.Spec.NodeName)
+		if err != nil {
+			log.Error(err, "Could not get macAddress from nodeinfo object for node name"+found_pod.Spec.NodeName)
+			return reconcile.Result{}, err
+		}
 		// Create snatAllocation CR
 		spec := aciv1.SnatAllocationSpec{
 			Podname:       found_pod.ObjectMeta.Name,
@@ -163,7 +168,7 @@ func (r *ReconcileSnatAllocation) handlePodEvent(request reconcile.Request) (rec
 			Snatip:        ip,
 			Namespace:     found_pod.ObjectMeta.Namespace,
 			Snatipuid:     uid,
-			Macaddress:    "f0:18:98:83:4a:8b",
+			Macaddress:    nodeInfoObj.Spec.Macaddress,
 			Protocols:     []string{"tcp", "udp"},
 		}
 		cr := newSnatAllocationCR(spec)

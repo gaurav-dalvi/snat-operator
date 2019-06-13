@@ -44,9 +44,15 @@ rules:
   - update
 - apiGroups:
   - aci.snat
+  - aci.nodeinfo
   resources:
   - '*'
   - snatips
   - snatallocations
+  - nodeinfo
   verbs:
   - '*'
+  - get
+  - create
+  - delete
+  - update

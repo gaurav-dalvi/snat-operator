@@ -118,7 +118,13 @@ func (r *ReconcileSnatIP) Reconcile(request reconcile.Request) (reconcile.Result
 	validator := utils.Validator{}
 	validator.ValidateSnatIP(instance)
 	if !validator.Validated {
-		reqLogger.Error(err, "SnatIPSpec is not valid - "+validator.ErrorMessage)
+		reqLogger.Error(err, "SnatIPSpec is not valid, hence deleting it : "+validator.ErrorMessage)
+		// Deleting snatip instance
+		err = r.client.Delete(context.TODO(), instance)
+		if err != nil {
+			reqLogger.Error(err, "failed to delete a santip item : "+instance.ObjectMeta.Name)
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{}, err
 	}
 

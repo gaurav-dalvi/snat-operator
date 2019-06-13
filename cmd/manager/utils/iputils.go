@@ -1,8 +1,12 @@
 package utils
 
 import (
+	"bytes"
+	"fmt"
 	"net"
 	"sort"
+
+	snattypes "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
 )
 
 func inc(ip net.IP) {
@@ -15,7 +19,7 @@ func inc(ip net.IP) {
 }
 
 // Given CIDR, this function returns list of IP addresses in that CIDR
-// It does not omit network and host reserved IP address from that.
+// It does omit network and host reserved IP address from that.
 func GetIPsFromCIDR(cidr string) []string {
 
 	var output []string
@@ -27,7 +31,7 @@ func GetIPsFromCIDR(cidr string) []string {
 	for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
 		output = append(output, ip.String())
 	}
-	return output
+	return output[1 : len(output)-1]
 }
 
 // Given two slices of IP addresses, finds the difference of two sets
@@ -54,8 +58,40 @@ func ExpandCIDRs(currCIDRs []string) []string {
 	}
 
 	// Sort list of IPs
-	sort.Strings(expandedIPs)
+	expandedIPs = sortIps(expandedIPs)
 	UtilLog.Info("Inside ExpandCIDRs", "currCIDRs:", expandedIPs)
 
 	return expandedIPs
+}
+
+// This function sorts IP by parsing them to net.IP struct. String sort does not work
+// eg: 10.0.0.9 should come before 10.0.0.10
+func sortIps(ips []string) []string {
+	realIPs := make([]net.IP, 0, len(ips))
+	for _, ip := range ips {
+		realIPs = append(realIPs, net.ParseIP(ip))
+	}
+
+	sort.Slice(realIPs, func(i, j int) bool { return bytes.Compare(realIPs[i], realIPs[j]) < 0 })
+
+	outputIps := make([]string, 0, len(realIPs))
+	for _, ip := range realIPs {
+		outputIps = append(outputIps, fmt.Sprintf("%s", ip))
+	}
+	return outputIps
+}
+
+// This function will be repaced depeding upon design choice.
+func GetReservedPortRanges() []snattypes.PortRange {
+	reservedPorts := []snattypes.PortRange{
+		snattypes.PortRange{Start: 1, End: 1},
+		snattypes.PortRange{Start: 20, End: 22},
+		snattypes.PortRange{Start: 29, End: 29},
+		snattypes.PortRange{Start: 37, End: 37},
+		snattypes.PortRange{Start: 42, End: 43},
+		snattypes.PortRange{Start: 108, End: 110},
+		snattypes.PortRange{Start: 443, End: 445},
+		snattypes.PortRange{Start: 1080, End: 1080},
+	}
+	return reservedPorts
 }

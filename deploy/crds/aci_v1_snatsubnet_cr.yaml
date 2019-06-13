@@ -10,7 +10,7 @@ spec:
   snatports: 
     - 
       end: 10000
-      start: 1000
+      start: 2000
     # - 
     #   end: 20000
     #   start: 10001

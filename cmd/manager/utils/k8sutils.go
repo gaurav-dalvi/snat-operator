@@ -6,8 +6,8 @@ import (
 
 	aciv1 "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
 	snattypes "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 
-	// nodeinfotypes "github.com/gaurav-dalvi/aci-containers/pkg/nodeinfo/apis/aci.nodeinfo/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -61,17 +61,21 @@ func GetPodNameFromReoncileRequest(requestName string) (string, string, string) 
 	return podName, resourceType, resourceName
 }
 
-// // Get nodeinfo object matching given name
-// func GetNodeInfoCRObject(c client.Client, name, namespace string) (nodeinfotypes.Nodeinfo, error) {
-// 	nodeinfoObj := &nodeinfotypes.Nodeinfo{}
-// 	err := c.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, nodeinfoObj)
-// 	if err != nil && errors.IsNotFound(err) {
-// 		UtilLog.Info("Cound not find nodeinfo object", "Name:", name)
-// 		return nodeinfotypes.Nodeinfo{}, err
-// 	}
-// 	return nodeinfoObj, nil
+// Get nodeinfo object matching given name
+func GetNodeInfoCRObject(c client.Client, name string) (Nodeinfo, error) {
+	UtilLog.Info("@@@@@@@@@@@@@", "TEST1111", name)
+	nodeinfoList := &NodeinfoList{}
+	err := c.List(context.TODO(), &client.ListOptions{Namespace: ""}, nodeinfoList)
+	if err != nil && errors.IsNotFound(err) {
+		UtilLog.Info("Cound not find nodeinfo object", "Name:", name)
+		return Nodeinfo{}, err
+	}
+	for _, item := range nodeinfoList.Items {
+		UtilLog.Info("###########", "TEST", item.Spec.Macaddress+"/"+item.Spec.Nodename)
+	}
+	return nodeinfoList.Items[0], nil
 
-// }
+}
 
 // Given a reconcile request name, it extracts out node name by omiiting node-event- from it
 func GetNodeNameFromReoncileRequest(requestName string) string {

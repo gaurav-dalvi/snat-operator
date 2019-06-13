@@ -110,7 +110,13 @@ func (r *ReconcileSnatSubnet) Reconcile(request reconcile.Request) (reconcile.Re
 	validator := utils.Validator{}
 	validator.ValidateSnatSubnet(instance)
 	if !validator.Validated {
-		reqLogger.Error(err, "SnatSpec is not valid - "+validator.ErrorMessage)
+		reqLogger.Error(err, "SnatSubnetSpec is not valid, hence deleting it : "+validator.ErrorMessage)
+		// Deleting snatsubnet instance
+		err = r.client.Delete(context.TODO(), instance)
+		if err != nil {
+			reqLogger.Error(err, "failed to delete a snatsubnet item : "+instance.ObjectMeta.Name)
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{}, err
 	}
 
