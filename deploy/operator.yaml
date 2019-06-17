@@ -16,15 +16,13 @@ spec:
       containers:
         - name: snat-operator
           # Replace this with the built image name
-          image: REPLACE_IMAGE
+          image: gauravdalvi/snat-operator:v0.0.2
           command:
           - snat-operator
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+              value: ""
             - name: POD_NAME
               valueFrom:
                 fieldRef:

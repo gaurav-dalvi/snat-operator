@@ -1,0 +1,7 @@
+apiVersion: aci.snat/v1
+kind: SnatGlobalInfo
+metadata:
+  name: example-snatglobalinfo
+spec:
+  # Add fields here
+  size: 3

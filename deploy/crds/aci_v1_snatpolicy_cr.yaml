@@ -1,0 +1,7 @@
+apiVersion: aci.snat/v1
+kind: SnatPolicy
+metadata:
+  name: example-snatpolicy
+spec:
+  # Add fields here
+  size: 3
