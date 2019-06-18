@@ -28,8 +28,42 @@ spec:
         metadata:
           type: object
         spec:
+          properties:
+            localInfos:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "operator-sdk generate k8s" to regenerate code after
+                modifying this file Add custom validation using kubebuilder tags:
+                https://book.kubebuilder.io/beyond_basics/generating_crd.html'
+              items:
+                properties:
+                  podName:
+                    type: string
+                  podNamespace:
+                    type: string
+                  poduid:
+                    type: string
+                  snatIp:
+                    type: string
+                required:
+                - poduid
+                - podName
+                - podNamespace
+                - snatIp
+                type: object
+              type: array
+          required:
+          - localInfos
           type: object
         status:
+          properties:
+            status:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "operator-sdk generate k8s" to regenerate
+                code after modifying this file Add custom validation using kubebuilder
+                tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
+              type: string
+          required:
+          - status
           type: object
   version: v1
   versions:

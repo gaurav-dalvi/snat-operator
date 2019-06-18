@@ -28,6 +28,62 @@ spec:
         metadata:
           type: object
         spec:
+          properties:
+            globalInfos:
+              items:
+                properties:
+                  macAddress:
+                    type: string
+                  nodeMame:
+                    type: string
+                  portRanges:
+                    items:
+                      properties:
+                        end:
+                          format: int64
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
+                        start:
+                          format: int64
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
+                      type: object
+                    type: array
+                  protocols:
+                    items:
+                      enum:
+                      - tcp
+                      - udp
+                      - icmp
+                      type: string
+                    type: array
+                  snatIp:
+                    type: string
+                  snatIpUid:
+                    type: string
+                required:
+                - macAddress
+                - snatIp
+                - portRanges
+                - nodeMame
+                - snatIpUid
+                - protocols
+                type: object
+              type: array
+            snatType:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "operator-sdk generate k8s" to regenerate code after
+                modifying this file Add custom validation using kubebuilder tags:
+                https://book.kubebuilder.io/beyond_basics/generating_crd.html'
+              enum:
+              - selector
+              - ' node'
+              type: string
+          required:
+          - snatType
+          - globalInfos
           type: object
         status:
           type: object

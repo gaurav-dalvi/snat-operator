@@ -13,6 +13,7 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
+		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.PortRange":            schema_pkg_apis_aci_v1_PortRange(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.SnatGlobalInfo":       schema_pkg_apis_aci_v1_SnatGlobalInfo(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.SnatGlobalInfoSpec":   schema_pkg_apis_aci_v1_SnatGlobalInfoSpec(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.SnatGlobalInfoStatus": schema_pkg_apis_aci_v1_SnatGlobalInfoStatus(ref),
@@ -22,6 +23,30 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.SnatPolicy":           schema_pkg_apis_aci_v1_SnatPolicy(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.SnatPolicySpec":       schema_pkg_apis_aci_v1_SnatPolicySpec(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.SnatPolicyStatus":     schema_pkg_apis_aci_v1_SnatPolicyStatus(ref),
+	}
+}
+
+func schema_pkg_apis_aci_v1_PortRange(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"start": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"end": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
 	}
 }
 
@@ -73,10 +98,32 @@ func schema_pkg_apis_aci_v1_SnatGlobalInfoSpec(ref common.ReferenceCallback) com
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "SnatGlobalInfoSpec defines the desired state of SnatGlobalInfo",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"snatType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"globalInfos": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.GlobalInfo"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"snatType", "globalInfos"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.GlobalInfo"},
 	}
 }
 
@@ -140,10 +187,26 @@ func schema_pkg_apis_aci_v1_SnatLocalInfoSpec(ref common.ReferenceCallback) comm
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "SnatLocalInfoSpec defines the desired state of SnatLocalInfo",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"localInfos": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.LocalInfo"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"localInfos"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.LocalInfo"},
 	}
 }
 
@@ -152,7 +215,16 @@ func schema_pkg_apis_aci_v1_SnatLocalInfoStatus(ref common.ReferenceCallback) co
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "SnatLocalInfoStatus defines the observed state of SnatLocalInfo",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"status"},
 			},
 		},
 		Dependencies: []string{},
@@ -207,10 +279,50 @@ func schema_pkg_apis_aci_v1_SnatPolicySpec(ref common.ReferenceCallback) common.
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "SnatPolicySpec defines the desired state of SnatPolicy",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"snatIp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"selector": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.PodSelector"),
+						},
+					},
+					"portRange": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.PortRange"),
+									},
+								},
+							},
+						},
+					},
+					"protocols": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"snatIp", "portRange"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.PodSelector", "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.PortRange"},
 	}
 }
 

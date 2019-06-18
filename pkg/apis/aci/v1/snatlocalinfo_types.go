@@ -13,6 +13,7 @@ type SnatLocalInfoSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
+	LocalInfos []LocalInfo `json:"localInfos"`
 }
 
 // SnatLocalInfoStatus defines the observed state of SnatLocalInfo
@@ -21,6 +22,7 @@ type SnatLocalInfoStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
+	Status string `json:"status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -43,6 +45,13 @@ type SnatLocalInfoList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []SnatLocalInfo `json:"items"`
+}
+
+type LocalInfo struct {
+	Poduid       string `json:"poduid"`
+	PodName      string `json:"podName"`
+	PodNamespace string `json:"podNamespace"`
+	SnatIp       string `json:"snatIp"`
 }
 
 func init() {

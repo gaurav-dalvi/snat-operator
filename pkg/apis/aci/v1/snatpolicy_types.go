@@ -13,6 +13,11 @@ type SnatPolicySpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
+	SnatIp    string      `json:"snatIp"`
+	Selector  PodSelector `json:"selector,omitempty"`
+	PortRange []PortRange `json:"portRange"`
+	// +kubebuilder:validation:Enum=tcp,udp,icmp
+	Protocols []string `json:"protocols,omitempty"`
 }
 
 // SnatPolicyStatus defines the observed state of SnatPolicy
@@ -43,6 +48,17 @@ type SnatPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []SnatPolicy `json:"items"`
+}
+
+type PodSelector struct {
+	Labels     []Label `json:"labels,omitempty"`
+	Deployment string  `json:"deployment,omitempty"`
+	Namespace  string  `json:"namespace,omitempty"`
+}
+
+type Label struct {
+	Key   string `json:"key,omitempty"`
+	Value string `json:"value,omitempty"`
 }
 
 func init() {

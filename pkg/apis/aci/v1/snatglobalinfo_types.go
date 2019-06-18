@@ -13,6 +13,9 @@ type SnatGlobalInfoSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
+	// +kubebuilder:validation:Enum=selector, node
+	SnatType    string       `json:"snatType"`
+	GlobalInfos []GlobalInfo `json:"globalInfos"`
 }
 
 // SnatGlobalInfoStatus defines the observed state of SnatGlobalInfo
@@ -43,6 +46,26 @@ type SnatGlobalInfoList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []SnatGlobalInfo `json:"items"`
+}
+
+type GlobalInfo struct {
+	MacAddress string      `json:"macAddress"`
+	SnatIp     string      `json:"snatIp"`
+	PortRanges []PortRange `json:"portRanges"`
+	NodeName   string      `json:"nodeMame"`
+	SnatIpUid  string      `json:"snatIpUid"`
+	// +kubebuilder:validation:Enum=tcp,udp,icmp
+	Protocols []string `json:"protocols"`
+}
+
+// +k8s:openapi-gen=true
+type PortRange struct {
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Start int `json:"start,omitempty"`
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	End int `json:"end,omitempty"`
 }
 
 func init() {
