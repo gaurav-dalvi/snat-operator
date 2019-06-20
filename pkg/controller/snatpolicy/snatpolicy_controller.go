@@ -98,7 +98,7 @@ func (r *ReconcileSnatPolicy) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	utils.GetNodeInfoCRObject(r.client)
+	utils.GetNodeInfoCRObject(r.client, "minikube")
 
 	// Pod already exists - don't requeue
 	reqLogger.Info("Skip reconcile:")

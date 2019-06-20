@@ -3,5 +3,12 @@ kind: SnatLocalInfo
 metadata:
   name: example-snatlocalinfo
 spec:
-  # Add fields here
-  size: 3
+  localInfos:
+    "ee0df48a-9386-11e9-a145-080027e9a6d6":
+      podName: foo
+      podNamespace: default
+      snatIp: "10.20.30.40"
+    "ee0df48a-9386-11e9-a145-080027e9aaaa":
+      podName: bar
+      podNamespace: default
+      snatIp: "10.20.30.41"

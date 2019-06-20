@@ -31,23 +31,18 @@ spec:
           properties:
             localInfos:
               additionalProperties:
-                items:
-                  properties:
-                    podName:
-                      type: string
-                    podNamespace:
-                      type: string
-                    poduid:
-                      type: string
-                    snatIp:
-                      type: string
-                  required:
-                  - podName
-                  - podNamespace
-                  - snatIp
-                  - poduid
-                  type: object
-                type: array
+                properties:
+                  podName:
+                    type: string
+                  podNamespace:
+                    type: string
+                  snatIp:
+                    type: string
+                required:
+                - podName
+                - podNamespace
+                - snatIp
+                type: object
               type: object
           required:
           - localInfos

@@ -280,14 +280,7 @@ func schema_pkg_apis_aci_v1_SnatLocalInfoSpec(ref common.ReferenceCallback) comm
 							AdditionalProperties: &spec.SchemaOrBool{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Type: []string{"array"},
-										Items: &spec.SchemaOrArray{
-											Schema: &spec.Schema{
-												SchemaProps: spec.SchemaProps{
-													Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.LocalInfo"),
-												},
-											},
-										},
+										Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.LocalInfo"),
 									},
 								},
 							},

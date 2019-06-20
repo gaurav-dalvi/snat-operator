@@ -14,7 +14,7 @@ type SnatLocalInfoSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
-	LocalInfos map[string][]LocalInfo `json:"localInfos"`
+	LocalInfos map[string]LocalInfo `json:"localInfos"`
 }
 
 // SnatLocalInfoStatus defines the observed state of SnatLocalInfo
@@ -52,7 +52,6 @@ type LocalInfo struct {
 	PodName      string `json:"podName"`
 	PodNamespace string `json:"podNamespace"`
 	SnatIp       string `json:"snatIp"`
-	Poduid       string `json:"poduid"`
 }
 
 func init() {

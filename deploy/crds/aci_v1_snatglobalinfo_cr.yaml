@@ -4,4 +4,42 @@ metadata:
   name: example-snatglobalinfo
 spec:
   # Add fields here
-  size: 3
+  snatType: selector
+  globalInfos:
+    "10.20.30.40":
+      -
+        macAddress: f0:18:98:83:4a:8b
+        portRanges:
+            start: 1000
+            end: 2000
+        nodeName: minikube
+        snatIpUid: "ee0df48a-9386-11e9-a145-080027e9a6d6"
+        protocols: ["tcp", "udp"]
+      -
+        macAddress: f0:18:98:83:4a:99
+        portRanges:
+            start: 5000
+            end: 6000
+        nodeName: minikube-1
+        snatIpUid: "ee0df48a-9386-11e9-a145-080027e9a666"
+        protocols: ["tcp"]
+    "10.20.30.50":
+      -
+        macAddress: f0:18:98:83:4a:8b
+        portRanges:
+            start: 3000
+            end: 4000
+        nodeName: minikube
+        snatIpUid: "ee0df48a-9386-11e9-a145-080027e9a6d6"
+        protocols: ["tcp", "udp"]
+      -
+        macAddress: f0:18:98:83:4a:99
+        portRanges:
+            start: 8000
+            end: 9000
+        nodeName: minikube-1
+        snatIpUid: "ee0df48a-9386-11e9-a145-080027e9a666"
+        protocols: ["tcp"]
+        
+            
+

@@ -60,6 +60,11 @@ func GetPodNameFromReoncileRequest(requestName string) (string, string, string) 
 }
 
 // Get nodeinfo object matching given name of the node
+// Optimization can be done here:
+// if we know namespace of this nodeinfo object then we can type request.NamespacedName{Name: , Namespace:}
+// in Get call and directly get the object instead of doing List and iterating.
+// But for that namespace has to be knowen. We can push aci-containers-system / kube-system inserted as ENV var
+// in this container then we can refer to that.
 func GetNodeInfoCRObject(c client.Client, nodeName string) (nodeinfoTypes.NodeInfo, error) {
 	nodeinfoList := &nodeinfoTypes.NodeInfoList{}
 	err := c.List(context.TODO(), &client.ListOptions{Namespace: ""}, nodeinfoList)

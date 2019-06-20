@@ -35,23 +35,21 @@ spec:
                   properties:
                     macAddress:
                       type: string
-                    nodeMame:
+                    nodeName:
                       type: string
                     portRanges:
-                      items:
-                        properties:
-                          end:
-                            format: int64
-                            maximum: 65535
-                            minimum: 1
-                            type: integer
-                          start:
-                            format: int64
-                            maximum: 65535
-                            minimum: 1
-                            type: integer
-                        type: object
-                      type: array
+                      properties:
+                        end:
+                          format: int64
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
+                        start:
+                          format: int64
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
+                      type: object
                     protocols:
                       items:
                         enum:
@@ -60,15 +58,12 @@ spec:
                         - icmp
                         type: string
                       type: array
-                    snatIp:
-                      type: string
                     snatIpUid:
                       type: string
                   required:
                   - macAddress
                   - portRanges
-                  - nodeMame
-                  - snatIp
+                  - nodeName
                   - snatIpUid
                   - protocols
                   type: object
