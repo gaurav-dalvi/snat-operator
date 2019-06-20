@@ -3,5 +3,26 @@ kind: SnatPolicy
 metadata:
   name: example-snatpolicy
 spec:
-  # Add fields here
-  size: 3
+  snatIp: 10.20.30.40
+  selector:
+    namespace: foo
+    deployment: foo-deployment
+    labels:
+      -
+        key: sampleKey1
+        value: sampleValue1
+      -
+        key: sampleKey2
+        value: sampleValue2
+
+  portRange:
+     - 
+      end: 10000
+      start: 50000
+    # - 
+    #   end: 20000
+    #   start: 10001
+    # - 
+    #   end: 65000
+    #   start: 20001
+

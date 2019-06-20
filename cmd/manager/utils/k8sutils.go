@@ -4,8 +4,11 @@ import (
 	"context"
 	"strings"
 
+	// nodeinfo "github.com/noironetworks/aci-containers/pkg/nodeinfo/apis/aci.nodeinfo/v1"
+	nodeinfoTypes "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -56,21 +59,24 @@ func GetPodNameFromReoncileRequest(requestName string) (string, string, string) 
 	return podName, resourceType, resourceName
 }
 
-// // Get nodeinfo object matching given name
-// func GetNodeInfoCRObject(c client.Client, name string) (Nodeinfo, error) {
-// 	UtilLog.Info("@@@@@@@@@@@@@", "TEST1111", name)
-// 	nodeinfoList := &NodeinfoList{}
-// 	err := c.List(context.TODO(), &client.ListOptions{Namespace: ""}, nodeinfoList)
-// 	if err != nil && errors.IsNotFound(err) {
-// 		UtilLog.Info("Cound not find nodeinfo object", "Name:", name)
-// 		return Nodeinfo{}, err
-// 	}
-// 	for _, item := range nodeinfoList.Items {
-// 		UtilLog.Info("###########", "TEST", item.Spec.Macaddress+"/"+item.Spec.Nodename)
-// 	}
-// 	return nodeinfoList.Items[0], nil
+// Get nodeinfo object matching given name of the node
+func GetNodeInfoCRObject(c client.Client, nodeName string) (nodeinfoTypes.NodeInfo, error) {
+	nodeinfoList := &nodeinfoTypes.NodeInfoList{}
+	err := c.List(context.TODO(), &client.ListOptions{Namespace: ""}, nodeinfoList)
+	if err != nil && errors.IsNotFound(err) {
+		UtilLog.Error(err, "Cound not find nodeinfo object")
+		return nodeinfoTypes.NodeInfo{}, err
+	}
 
-// }
+	for _, item := range nodeinfoList.Items {
+		if item.ObjectMeta.Name == nodeName {
+			UtilLog.Info("Nodeinfo object found", "For NodeName:", item.ObjectMeta.Name)
+			return item, nil
+		}
+	}
+	return nodeinfoTypes.NodeInfo{}, err
+
+}
 
 // Given a reconcile request name, it extracts out node name by omiiting node-event- from it
 func GetNodeNameFromReoncileRequest(requestName string) string {

@@ -14,8 +14,8 @@ type SnatGlobalInfoSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 	// +kubebuilder:validation:Enum=selector, node
-	SnatType    string       `json:"snatType"`
-	GlobalInfos []GlobalInfo `json:"globalInfos"`
+	SnatType    string                  `json:"snatType"`
+	GlobalInfos map[string][]GlobalInfo `json:"globalInfos"`
 }
 
 // SnatGlobalInfoStatus defines the observed state of SnatGlobalInfo
@@ -50,9 +50,9 @@ type SnatGlobalInfoList struct {
 
 type GlobalInfo struct {
 	MacAddress string      `json:"macAddress"`
-	SnatIp     string      `json:"snatIp"`
 	PortRanges []PortRange `json:"portRanges"`
 	NodeName   string      `json:"nodeMame"`
+	SnatIp     string      `json:"snatIp"`
 	SnatIpUid  string      `json:"snatIpUid"`
 	// +kubebuilder:validation:Enum=tcp,udp,icmp
 	Protocols []string `json:"protocols"`

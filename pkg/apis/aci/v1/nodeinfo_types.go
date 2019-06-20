@@ -7,54 +7,45 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// SnatLocalInfoSpec defines the desired state of SnatLocalInfo
+// NodeInfoSpec defines the desired state of NodeInfo
 // +k8s:openapi-gen=true
-type SnatLocalInfoSpec struct {
+type NodeInfoSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
-
-	LocalInfos map[string][]LocalInfo `json:"localInfos"`
+	MacAddress string `json:"macAddress"`
 }
 
-// SnatLocalInfoStatus defines the observed state of SnatLocalInfo
+// NodeInfoStatus defines the observed state of NodeInfo
 // +k8s:openapi-gen=true
-type SnatLocalInfoStatus struct {
+type NodeInfoStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
-	Status string `json:"status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SnatLocalInfo is the Schema for the snatlocalinfos API
+// NodeInfo is the Schema for the nodeinfos API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
-type SnatLocalInfo struct {
+type NodeInfo struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SnatLocalInfoSpec   `json:"spec,omitempty"`
-	Status SnatLocalInfoStatus `json:"status,omitempty"`
+	Spec   NodeInfoSpec   `json:"spec,omitempty"`
+	Status NodeInfoStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SnatLocalInfoList contains a list of SnatLocalInfo
-type SnatLocalInfoList struct {
+// NodeInfoList contains a list of NodeInfo
+type NodeInfoList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []SnatLocalInfo `json:"items"`
-}
-
-type LocalInfo struct {
-	PodName      string `json:"podName"`
-	PodNamespace string `json:"podNamespace"`
-	SnatIp       string `json:"snatIp"`
-	Poduid       string `json:"poduid"`
+	Items           []NodeInfo `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&SnatLocalInfo{}, &SnatLocalInfoList{})
+	SchemeBuilder.Register(&NodeInfo{}, &NodeInfoList{})
 }

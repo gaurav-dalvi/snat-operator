@@ -30,48 +30,50 @@ spec:
         spec:
           properties:
             globalInfos:
-              items:
-                properties:
-                  macAddress:
-                    type: string
-                  nodeMame:
-                    type: string
-                  portRanges:
-                    items:
-                      properties:
-                        end:
-                          format: int64
-                          maximum: 65535
-                          minimum: 1
-                          type: integer
-                        start:
-                          format: int64
-                          maximum: 65535
-                          minimum: 1
-                          type: integer
-                      type: object
-                    type: array
-                  protocols:
-                    items:
-                      enum:
-                      - tcp
-                      - udp
-                      - icmp
+              additionalProperties:
+                items:
+                  properties:
+                    macAddress:
                       type: string
-                    type: array
-                  snatIp:
-                    type: string
-                  snatIpUid:
-                    type: string
-                required:
-                - macAddress
-                - snatIp
-                - portRanges
-                - nodeMame
-                - snatIpUid
-                - protocols
-                type: object
-              type: array
+                    nodeMame:
+                      type: string
+                    portRanges:
+                      items:
+                        properties:
+                          end:
+                            format: int64
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                          start:
+                            format: int64
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                        type: object
+                      type: array
+                    protocols:
+                      items:
+                        enum:
+                        - tcp
+                        - udp
+                        - icmp
+                        type: string
+                      type: array
+                    snatIp:
+                      type: string
+                    snatIpUid:
+                      type: string
+                  required:
+                  - macAddress
+                  - portRanges
+                  - nodeMame
+                  - snatIp
+                  - snatIpUid
+                  - protocols
+                  type: object
+                type: array
+              type: object
             snatType:
               description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
                 Important: Run "operator-sdk generate k8s" to regenerate code after

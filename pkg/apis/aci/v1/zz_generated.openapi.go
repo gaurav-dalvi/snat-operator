@@ -13,6 +13,9 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
+		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.NodeInfo":             schema_pkg_apis_aci_v1_NodeInfo(ref),
+		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.NodeInfoSpec":         schema_pkg_apis_aci_v1_NodeInfoSpec(ref),
+		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.NodeInfoStatus":       schema_pkg_apis_aci_v1_NodeInfoStatus(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.PortRange":            schema_pkg_apis_aci_v1_PortRange(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.SnatGlobalInfo":       schema_pkg_apis_aci_v1_SnatGlobalInfo(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.SnatGlobalInfoSpec":   schema_pkg_apis_aci_v1_SnatGlobalInfoSpec(ref),
@@ -23,6 +26,82 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.SnatPolicy":           schema_pkg_apis_aci_v1_SnatPolicy(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.SnatPolicySpec":       schema_pkg_apis_aci_v1_SnatPolicySpec(ref),
 		"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.SnatPolicyStatus":     schema_pkg_apis_aci_v1_SnatPolicyStatus(ref),
+	}
+}
+
+func schema_pkg_apis_aci_v1_NodeInfo(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NodeInfo is the Schema for the nodeinfos API",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.NodeInfoSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.NodeInfoStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.NodeInfoSpec", "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.NodeInfoStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_aci_v1_NodeInfoSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NodeInfoSpec defines the desired state of NodeInfo",
+				Properties: map[string]spec.Schema{
+					"macAddress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"macAddress"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_aci_v1_NodeInfoStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NodeInfoStatus defines the observed state of NodeInfo",
+				Properties:  map[string]spec.Schema{},
+			},
+		},
+		Dependencies: []string{},
 	}
 }
 
@@ -108,11 +187,18 @@ func schema_pkg_apis_aci_v1_SnatGlobalInfoSpec(ref common.ReferenceCallback) com
 					},
 					"globalInfos": {
 						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.GlobalInfo"),
+										Type: []string{"array"},
+										Items: &spec.SchemaOrArray{
+											Schema: &spec.Schema{
+												SchemaProps: spec.SchemaProps{
+													Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.GlobalInfo"),
+												},
+											},
+										},
 									},
 								},
 							},
@@ -190,12 +276,18 @@ func schema_pkg_apis_aci_v1_SnatLocalInfoSpec(ref common.ReferenceCallback) comm
 				Properties: map[string]spec.Schema{
 					"localInfos": {
 						SchemaProps: spec.SchemaProps{
-							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.LocalInfo"),
+										Type: []string{"array"},
+										Items: &spec.SchemaOrArray{
+											Schema: &spec.Schema{
+												SchemaProps: spec.SchemaProps{
+													Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.LocalInfo"),
+												},
+											},
+										},
 									},
 								},
 							},
