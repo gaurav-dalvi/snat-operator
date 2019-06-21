@@ -1,0 +1,8 @@
+apiVersion: aci.nodeinfo/v1
+kind: Nodeinfo
+metadata:
+  name: example-nodeinfo
+spec:
+  # Add fields here
+     nodename: minikube
+     macaddress: f0:18:98:83:4a:8b

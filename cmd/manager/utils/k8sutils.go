@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	// nodeinfo "github.com/noironetworks/aci-containers/pkg/nodeinfo/apis/aci.nodeinfo/v1"
-	nodeinfoTypes "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
+	nodeinfo "github.com/noironetworks/aci-containers/pkg/nodeinfo/apis/aci.nodeinfo/v1"
+	// nodeinfoTypes "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -65,21 +65,22 @@ func GetPodNameFromReoncileRequest(requestName string) (string, string, string) 
 // in Get call and directly get the object instead of doing List and iterating.
 // But for that namespace has to be knowen. We can push aci-containers-system / kube-system inserted as ENV var
 // in this container then we can refer to that.
-func GetNodeInfoCRObject(c client.Client, nodeName string) (nodeinfoTypes.NodeInfo, error) {
-	nodeinfoList := &nodeinfoTypes.NodeInfoList{}
+func GetNodeInfoCRObject(c client.Client, nodeName string) (nodeinfo.Nodeinfo, error) {
+	nodeinfoList := &nodeinfo.NodeinfoList{}
 	err := c.List(context.TODO(), &client.ListOptions{Namespace: ""}, nodeinfoList)
 	if err != nil && errors.IsNotFound(err) {
 		UtilLog.Error(err, "Cound not find nodeinfo object")
-		return nodeinfoTypes.NodeInfo{}, err
+		return nodeinfo.Nodeinfo{}, err
 	}
 
+	UtilLog.Info("Nodeinfo object found", "List is", nodeinfoList)
 	for _, item := range nodeinfoList.Items {
 		if item.ObjectMeta.Name == nodeName {
 			UtilLog.Info("Nodeinfo object found", "For NodeName:", item.ObjectMeta.Name)
 			return item, nil
 		}
 	}
-	return nodeinfoTypes.NodeInfo{}, err
+	return nodeinfo.Nodeinfo{}, err
 
 }
 

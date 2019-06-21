@@ -386,6 +386,17 @@
   version = "1.0.1"
 
 [[projects]]
+  branch = "snat-jayaram"
+  digest = "1:bb8a69891567abff80087ccb6b327cf8d2d946c3f5b61d9022a7aef38a4bb707"
+  name = "github.com/noironetworks/aci-containers"
+  packages = [
+    "pkg/nodeinfo/apis/aci.nodeinfo",
+    "pkg/nodeinfo/apis/aci.nodeinfo/v1",
+  ]
+  pruneopts = "NT"
+  revision = "c8074bd0c6cb18c89d9ced064187e0dfaa75c0b4"
+
+[[projects]]
   digest = "1:fe3c97fb1956829a81d7b8221b4710c40d6dae2c6c3b4d222db5b7f96c975d99"
   name = "github.com/operator-framework/operator-sdk"
   packages = [
@@ -1031,15 +1042,25 @@
     "pkg/client",
     "pkg/client/apiutil",
     "pkg/client/config",
+    "pkg/controller",
+    "pkg/event",
+    "pkg/handler",
+    "pkg/internal/controller",
+    "pkg/internal/controller/metrics",
     "pkg/internal/recorder",
     "pkg/leaderelection",
     "pkg/manager",
     "pkg/metrics",
     "pkg/patch",
+    "pkg/predicate",
+    "pkg/reconcile",
     "pkg/recorder",
     "pkg/runtime/inject",
     "pkg/runtime/log",
+    "pkg/runtime/scheme",
     "pkg/runtime/signals",
+    "pkg/source",
+    "pkg/source/internal",
     "pkg/webhook/admission",
     "pkg/webhook/admission/types",
     "pkg/webhook/internal/metrics",
@@ -1075,14 +1096,22 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/operator-framework/operator-sdk/pkg/k8sutil",
+    "github.com/go-openapi/spec",
+    "github.com/noironetworks/aci-containers/pkg/nodeinfo/apis/aci.nodeinfo",
+    "github.com/noironetworks/aci-containers/pkg/nodeinfo/apis/aci.nodeinfo/v1",
     "github.com/operator-framework/operator-sdk/pkg/leader",
     "github.com/operator-framework/operator-sdk/pkg/log/zap",
     "github.com/operator-framework/operator-sdk/pkg/metrics",
     "github.com/operator-framework/operator-sdk/pkg/restmapper",
     "github.com/operator-framework/operator-sdk/version",
     "github.com/spf13/pflag",
+    "k8s.io/api/apps/v1",
+    "k8s.io/api/core/v1",
+    "k8s.io/apimachinery/pkg/api/errors",
+    "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",
+    "k8s.io/apimachinery/pkg/runtime/schema",
+    "k8s.io/apimachinery/pkg/types",
     "k8s.io/client-go/plugin/pkg/client/auth",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/conversion-gen",
@@ -1091,10 +1120,17 @@
     "k8s.io/code-generator/cmd/lister-gen",
     "k8s.io/gengo/args",
     "k8s.io/kube-openapi/cmd/openapi-gen",
+    "k8s.io/kube-openapi/pkg/common",
+    "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
+    "sigs.k8s.io/controller-runtime/pkg/controller",
+    "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
+    "sigs.k8s.io/controller-runtime/pkg/reconcile",
     "sigs.k8s.io/controller-runtime/pkg/runtime/log",
+    "sigs.k8s.io/controller-runtime/pkg/runtime/scheme",
     "sigs.k8s.io/controller-runtime/pkg/runtime/signals",
+    "sigs.k8s.io/controller-runtime/pkg/source",
     "sigs.k8s.io/controller-tools/pkg/crd/generator",
   ]
   solver-name = "gps-cdcl"

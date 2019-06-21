@@ -1,7 +1,0 @@
-apiVersion: aci.snat/v1
-kind: NodeInfo
-metadata:
-  name: minikube
-  namespace: foo
-spec:
-  macAddress: f0:18:98:83:4a:8b
