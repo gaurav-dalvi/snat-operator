@@ -178,16 +178,10 @@ func schema_pkg_apis_aci_v1_SnatGlobalInfoSpec(ref common.ReferenceCallback) com
 			SchemaProps: spec.SchemaProps{
 				Description: "SnatGlobalInfoSpec defines the desired state of SnatGlobalInfo",
 				Properties: map[string]spec.Schema{
-					"snatType": {
-						SchemaProps: spec.SchemaProps{
-							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
 					"globalInfos": {
 						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
+							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
@@ -400,7 +394,7 @@ func schema_pkg_apis_aci_v1_SnatPolicySpec(ref common.ReferenceCallback) common.
 						},
 					},
 				},
-				Required: []string{"snatIp", "portRange"},
+				Required: []string{"snatIp"},
 			},
 		},
 		Dependencies: []string{

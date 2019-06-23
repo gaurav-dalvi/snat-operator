@@ -2,15 +2,19 @@ package snatglobalinfo
 
 import (
 	"context"
+	"os"
+	"strings"
 
+	"github.com/gaurav-dalvi/snat-operator/cmd/manager/utils"
 	aciv1 "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -48,12 +52,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner SnatGlobalInfo
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &aciv1.SnatGlobalInfo{},
-	})
+	err = c.Watch(&source.Kind{Type: &aciv1.SnatLocalInfo{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: HandleLocalInfosMapper(mgr.GetClient(), []predicate.Predicate{})})
 	if err != nil {
 		return err
 	}
@@ -82,10 +81,35 @@ type ReconcileSnatGlobalInfo struct {
 func (r *ReconcileSnatGlobalInfo) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling SnatGlobalInfo")
+	if strings.Contains(request.Name, "snat-localinfo-") {
+		localInfoName := request.Name[len("snat-localinfo-"):]
+		result, err := r.handleLocainfoEvent(localInfoName)
+		return result, err
+	} else {
+		// Fetch the SnatGlobalInfo instance
+		instance := &aciv1.SnatGlobalInfo{}
+		err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				// Request object not found, could have been deleted after reconcile request.
+				// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+				// Return and don't requeue
+				return reconcile.Result{}, nil
+			}
+			// Error reading the object - requeue the request.
+			return reconcile.Result{}, err
+		}
+	}
 
-	// Fetch the SnatGlobalInfo instance
-	instance := &aciv1.SnatGlobalInfo{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	return reconcile.Result{}, nil
+}
+
+// This function handles Localinfo events which are triggering snatGlobalInfo's reconcile loop
+func (r *ReconcileSnatGlobalInfo) handleLocainfoEvent(name string) (reconcile.Result, error) {
+
+	// Fetch the SnatLocainfo instance
+	instance := &aciv1.SnatLocalInfo{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: os.Getenv("ACI_SNAT_NAMESPACE")}, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -97,12 +121,37 @@ func (r *ReconcileSnatGlobalInfo) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, err
 	}
 
-	log.Info("ZZZZZZZZZ", "DDDDDDDDD", instance.Spec.GlobalInfos)
-	for key, value := range instance.Spec.GlobalInfos {
-		if key == "10.20.30.50" {
-			log.Info("AAAAAA", "VBBBBBBBB", value[3].SnatIpUid)
+	// Get SnatGlobalInfo instance
+	globalInfo := &aciv1.SnatGlobalInfo{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: os.Getenv("ACI_SNAGLOBALINFO_NAME"),
+		Namespace: os.Getenv("ACI_SNAT_NAMESPACE")}, instance)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// Create SnatGlobalInfo Object
+			globalInfos := []aciv1.GlobalInfo{}
+			// get Mac Address
+			nodeinfo, _ := utils.GetNodeInfoCRObject(r.client, instance.ObjectMeta.Name)
+			temp := aciv1.GlobalInfo{
+				MacAddress: nodeinfo.Spec.MacAddress,
+				PortRanges: utils.GetNextPortRange(),
+				NodeName:   instance.ObjectMeta.Name,
+				SnatIpUid:  "some uid",
+				Protocols:  []string{"tcp", "udp", "icmp"},
+			}
+			globalInfos = append(globalInfos, temp)
+			tempMap := make(map[string][]aciv1.GlobalInfo)
+			tempMap["10.20.30.40"] = globalInfos
+			spec := aciv1.SnatGlobalInfoSpec{
+				GlobalInfos: tempMap,
+			}
+			return utils.CreateSnatGlobalInfoCR(r.client, spec)
 		}
+		// Error reading the object - requeue the request.
+		return reconcile.Result{}, err
+	} else {
+		// update snatGlobalInfo object
+		// GlobalInfo CR is already present, Append GlobalInfo object into Spec's map  and update Globalinfo
+		return utils.UpdateGlobalInfoCR(r.client, *globalInfo)
 	}
 
-	return reconcile.Result{}, nil
 }

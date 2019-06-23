@@ -38,10 +38,13 @@ spec:
                     type: string
                   snatIp:
                     type: string
+                  snatPolicyName:
+                    type: string
                 required:
                 - podName
                 - podNamespace
                 - snatIp
+                - snatPolicyName
                 type: object
               type: object
           type: object

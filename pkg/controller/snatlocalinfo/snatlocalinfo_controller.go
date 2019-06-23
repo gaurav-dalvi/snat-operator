@@ -130,9 +130,10 @@ func (r *ReconcileSnatLocalInfo) handlePodEvent(request reconcile.Request) (reco
 	}
 
 	tempLocalInfo := aciv1.LocalInfo{
-		PodName:      podName,
-		PodNamespace: foundPod.ObjectMeta.Namespace,
-		SnatIp:       snatPolicy.Spec.SnatIp,
+		PodName:        podName,
+		PodNamespace:   foundPod.ObjectMeta.Namespace,
+		SnatIp:         snatPolicy.Spec.SnatIp,
+		SnatPolicyName: snatPolicy.ObjectMeta.Name,
 	}
 	localInfo, err := utils.GetLocalInfoCR(r.client, foundPod.Spec.NodeName, os.Getenv("ACI_SNAT_NAMESPACE"))
 

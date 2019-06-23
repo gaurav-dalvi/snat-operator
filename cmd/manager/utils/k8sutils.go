@@ -155,128 +155,33 @@ func UpdateLocalInfoCR(c client.Client, localInfo aciv1.SnatLocalInfo) (reconcil
 	return reconcile.Result{}, nil
 }
 
-// // Get all SnatSubnet CRs from k8s clustner
-// func GetAllSnatSubnets(c client.Client) (aciv1.SnatSubnet, error) {
-// 	snatSubnetList := &aciv1.SnatSubnetList{}
-// 	err := c.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatSubnetList)
-// 	if err != nil {
-// 		UtilLog.Error(err, "failed to list existing snatsubnets")
-// 		return aciv1.SnatSubnet{}, err
-// 	}
+// createSnatGlobalInfoCR Creates a SnatGlobalInfo CR
+func CreateSnatGlobalInfoCR(c client.Client, globalInfoSpec aciv1.SnatGlobalInfoSpec) (reconcile.Result, error) {
 
-// 	// We are making sure that there will always be one instance of snatsubnet in the system.
-// 	return snatSubnetList.Items[0], nil
-// }
+	obj := &aciv1.SnatGlobalInfo{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      os.Getenv("ACI_SNAGLOBALINFO_NAME"),
+			Namespace: os.Getenv("ACI_SNAT_NAMESPACE"),
+		},
+		Spec: globalInfoSpec,
+	}
+	err := c.Create(context.TODO(), obj)
+	if err != nil {
+		log.Error(err, "failed to create a snat global cr")
+		return reconcile.Result{}, err
+	}
+	log.Info("Created globalInfo object", "SnatGlobalInfo", obj)
+	return reconcile.Result{}, nil
+}
 
-// // Get all SnatAllocation CRs from k8s clustner
-// func GetAllSnatAllocations(c client.Client) (aciv1.SnatAllocationList, error) {
-// 	snatAllocationList := &aciv1.SnatAllocationList{}
-// 	err := c.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatAllocationList)
-// 	if err != nil {
-// 		UtilLog.Error(err, "failed to list existing SnatAllocationList")
-// 		return aciv1.SnatAllocationList{}, err
-// 	}
-// 	return *snatAllocationList, nil
-// }
+// UpdateSnatGlobalInfoCR Updates a SnatGlobalInfo CR
+func UpdateGlobalInfoCR(c client.Client, globalInfo aciv1.SnatGlobalInfo) (reconcile.Result, error) {
 
-// // Get all SnatIP CRs from k8s clustner
-// func GetAllSnatIps(c client.Client) (aciv1.SnatIPList, error) {
-// 	snatIpList := &aciv1.SnatIPList{}
-// 	err := c.List(context.TODO(), &client.ListOptions{Namespace: ""}, snatIpList)
-// 	if err != nil {
-// 		UtilLog.Error(err, "failed to list existing snatsubnets")
-// 		return aciv1.SnatIPList{}, err
-// 	}
-// 	return *snatIpList, nil
-// }
-
-// // Delete respective snat-allocation cr object for given pod
-// func DeleteSnatAllocationCR(podName, nameSpace string, c client.Client) error {
-
-// 	// Get all snatallocation CR objects
-// 	allocList, err := GetAllSnatAllocations(c)
-// 	if len(allocList.Items) == 0 {
-// 		// This can not happen. There has to be one entry matching for this pod
-// 		UtilLog.Error(err, "This can not happen. There has to be one entry matching for this pod:", "PodName/Namespace", podName+"/"+nameSpace)
-// 		return err
-// 	}
-
-// 	for _, item := range allocList.Items {
-// 		if item.Spec.Podname == podName && item.Spec.Namespace == nameSpace {
-// 			// Found snatalloc item, deleting it
-// 			err = c.Delete(context.TODO(), &item)
-// 			if err != nil {
-// 				UtilLog.Error(err, "failed to delete a snatallocation item : "+item.ObjectMeta.Name)
-// 				return err
-// 			}
-// 			break
-// 		}
-// 	}
-
-// 	return nil
-// }
-
-// // Delete respective snatip cr object for given name
-// func DeleteSnatIPCR(name string, c client.Client) error {
-
-// 	// Get all snatip CR objects
-// 	snatIPList, err := GetAllSnatIps(c)
-// 	if len(snatIPList.Items) == 0 {
-// 		UtilLog.Error(err, "Could not get list of snatIPs")
-// 		return err
-// 	}
-
-// 	for _, item := range snatIPList.Items {
-// 		if item.ObjectMeta.Name == name {
-// 			// Found snatip item, deleting it
-// 			err = c.Delete(context.TODO(), &item)
-// 			if err != nil {
-// 				UtilLog.Error(err, "failed to delete a snatip item : "+item.ObjectMeta.Name)
-// 				return err
-// 			}
-// 			break
-// 		}
-// 	}
-
-// 	return nil
-// }
-
-// // Get IP and port for pod for which notification has come to reconcile loop
-// func GetIPPortRangeForPod(snatIpItem aciv1.SnatIP,
-// 	snatSubnetItem aciv1.SnatSubnet, c client.Client) (string, snattypes.PortRange, string) {
-
-// 	if len(snatIpItem.Status.Allips) <= 0 || len(snatSubnetItem.Status.Expandedsnatports) <= 0 {
-// 		UtilLog.Info("Allips can not be empty. Resulting to error")
-// 		return "", snattypes.PortRange{}, ""
-// 	}
-
-// 	allocList, _ := GetAllSnatAllocations(c)
-// 	if len(allocList.Items) == 0 {
-// 		// No allocation has been done so do first allocation
-// 		return snatIpItem.Status.Allips[0], snatSubnetItem.Status.Expandedsnatports[0], string(uuid.NewUUID())
-// 	}
-
-// 	return "", snattypes.PortRange{}, ""
-// }
-
-// // Given a name, this function finds snatIP object
-// func SearchSnatIPByName(name, resourceType string, c client.Client) (*aciv1.SnatIP, error) {
-// 	instance := &aciv1.SnatIP{}
-// 	snatipList, err := GetAllSnatIps(c)
-// 	if err != nil {
-// 		UtilLog.Error(err, "failed to list of all snatsubnets")
-// 		return &aciv1.SnatIP{}, err
-// 	}
-
-// 	// Search for `name`
-// 	for _, item := range snatipList.Items {
-// 		if item.Spec.Name == name && item.Spec.Resourcetype == resourceType {
-// 			instance = &item
-// 			return instance, nil
-// 		}
-// 	}
-
-// 	// Could not find snatip with name, so erroring it out
-// 	UtilLog.Error(err, "Could not find snatip item for", "name", name)
-// 	return instance, err
-// }
+	err := c.Update(context.TODO(), &globalInfo)
+	if err != nil {
+		log.Error(err, "failed to update a snat globalInfo cr")
+		return reconcile.Result{}, err
+	}
+	log.Info("Updated globalInfo object", "SnatGlobalinfo", globalInfo)
+	return reconcile.Result{}, nil
+}

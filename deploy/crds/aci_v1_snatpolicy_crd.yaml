@@ -29,21 +29,6 @@ spec:
           type: object
         spec:
           properties:
-            portRange:
-              items:
-                properties:
-                  end:
-                    format: int64
-                    maximum: 65535
-                    minimum: 1
-                    type: integer
-                  start:
-                    format: int64
-                    maximum: 65535
-                    minimum: 1
-                    type: integer
-                type: object
-              type: array
             protocols:
               items:
                 enum:
@@ -76,7 +61,6 @@ spec:
               type: string
           required:
           - snatIp
-          - portRange
           type: object
         status:
           properties:
