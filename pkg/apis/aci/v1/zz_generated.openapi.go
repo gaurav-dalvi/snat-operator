@@ -205,7 +205,6 @@ func schema_pkg_apis_aci_v1_SnatGlobalInfoSpec(ref common.ReferenceCallback) com
 						},
 					},
 				},
-				Required: []string{"snatType", "globalInfos"},
 			},
 		},
 		Dependencies: []string{
@@ -287,7 +286,6 @@ func schema_pkg_apis_aci_v1_SnatLocalInfoSpec(ref common.ReferenceCallback) comm
 						},
 					},
 				},
-				Required: []string{"localInfos"},
 			},
 		},
 		Dependencies: []string{
@@ -309,7 +307,6 @@ func schema_pkg_apis_aci_v1_SnatLocalInfoStatus(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"status"},
 			},
 		},
 		Dependencies: []string{},
@@ -416,9 +413,24 @@ func schema_pkg_apis_aci_v1_SnatPolicyStatus(ref common.ReferenceCallback) commo
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "SnatPolicyStatus defines the observed state of SnatPolicy",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"expandedsnatports": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.PortRange"),
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1.PortRange"},
 	}
 }

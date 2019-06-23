@@ -44,8 +44,6 @@ spec:
                 - snatIp
                 type: object
               type: object
-          required:
-          - localInfos
           type: object
         status:
           properties:
@@ -55,8 +53,6 @@ spec:
                 code after modifying this file Add custom validation using kubebuilder
                 tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
               type: string
-          required:
-          - status
           type: object
   version: v1
   versions:

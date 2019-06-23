@@ -14,8 +14,8 @@ type SnatGlobalInfoSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 	// +kubebuilder:validation:Enum=selector, node
-	SnatType    string                  `json:"snatType"`
-	GlobalInfos map[string][]GlobalInfo `json:"globalInfos"`
+	SnatType    string                  `json:"snatType,omitempty"`
+	GlobalInfos map[string][]GlobalInfo `json:"globalInfos,omitempty"`
 }
 
 // SnatGlobalInfoStatus defines the observed state of SnatGlobalInfo

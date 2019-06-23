@@ -2,10 +2,11 @@ package snatpolicy
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/gaurav-dalvi/snat-operator/cmd/manager/utils"
 	aciv1 "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,6 +17,9 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+const snatPolicyFinalizer = "finalizer.snatpolicy.aci.snat"
+const PORTPERNODES = 1000
 
 var log = logf.Log.WithName("controller_snatpolicy")
 
@@ -45,16 +49,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch for changes to primary resource SnatPolicy
 	err = c.Watch(&source.Kind{Type: &aciv1.SnatPolicy{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return err
-	}
-
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner SnatPolicy
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &aciv1.SnatPolicy{},
-	})
 	if err != nil {
 		return err
 	}
@@ -98,9 +92,76 @@ func (r *ReconcileSnatPolicy) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	utils.GetNodeInfoCRObject(r.client, "minikube")
+	// Check if the snatpolicy cr was marked to be deleted
+	isSnatPolicyToBeDeleted := instance.GetDeletionTimestamp() != nil
+	if isSnatPolicyToBeDeleted {
+		if utils.Contains(instance.GetFinalizers(), snatPolicyFinalizer) {
+			// Run finalization logic for snatPolicyFinalizer. If the
+			// finalization logic fails, don't remove the finalizer so
+			// that we can retry during the next reconciliation.
+			if err := r.finalizeSnatPolicy(reqLogger, instance); err != nil {
+				return reconcile.Result{}, err
+			}
 
-	// Pod already exists - don't requeue
-	reqLogger.Info("Skip reconcile:")
+			// Remove snatPolicyFinalizer. Once all finalizers have been
+			// removed, the object will be deleted.
+			instance.SetFinalizers(utils.Remove(instance.GetFinalizers(), snatPolicyFinalizer))
+			err := r.client.Update(context.TODO(), instance)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		return reconcile.Result{}, nil
+	}
+
+	// Validation of SnatPolicy struct
+	// Weite SnatPolicy Spec Validation here
+
+	// Add finalizer for this CR
+	if !utils.Contains(instance.GetFinalizers(), snatPolicyFinalizer) {
+		if err := r.addFinalizer(instance); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	// Update the status if necessary
+	expandedsnatports := utils.ExpandPortRanges(instance.Spec.PortRange, PORTPERNODES)
+	if !reflect.DeepEqual(instance.Status.Expandedsnatports, expandedsnatports) {
+		instance.Status.Expandedsnatports = expandedsnatports
+		err := r.client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			reqLogger.Error(err, "failed to update the SnatPolicy")
+			return reconcile.Result{}, err
+		}
+		reqLogger.Info("Updated snatpolicy status", "Status:", instance.Status)
+	}
+
+	// In case of update (deletion of subnets which are currently used by snatip)
+	if err := r.finalizeSnatPolicy(reqLogger, instance); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// If snatIP resource is using any of the IP in snatSubnet, then check that and send appropriate error
+	// return r.handleSnatSubnetUpdate(*instance)
 	return reconcile.Result{}, nil
+}
+
+// Add finalizer string to snatpolicy resource to run cleanup logic on delete
+func (r *ReconcileSnatPolicy) addFinalizer(m *aciv1.SnatPolicy) error {
+	log.Info("Adding Finalizer for the SnatPolicy")
+	m.SetFinalizers(append(m.GetFinalizers(), snatPolicyFinalizer))
+
+	// Update CR
+	err := r.client.Update(context.TODO(), m)
+	if err != nil {
+		log.Error(err, "Failed to update SnatSubnet with finalizer")
+		return err
+	}
+	return nil
+}
+
+// Cleanup steps to be done when snatPolicy resource is getting deleted.
+
+func (r *ReconcileSnatPolicy) finalizeSnatPolicy(reqLogger logr.Logger, m *aciv1.SnatPolicy) error {
+	return nil
 }

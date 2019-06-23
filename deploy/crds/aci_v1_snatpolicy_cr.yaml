@@ -1,24 +1,24 @@
 apiVersion: aci.snat/v1
 kind: SnatPolicy
 metadata:
-  name: example-snatpolicy
+  name: examplesnatpolicy
 spec:
   snatIp: 10.20.30.40
   selector:
     namespace: foo
-    deployment: foo-deployment
-    labels:
-      -
-        key: sampleKey1
-        value: sampleValue1
-      -
-        key: sampleKey2
-        value: sampleValue2
+    # deployment: foo-deployment
+    # labels:
+    #   -
+    #     key: sampleKey1
+    #     value: sampleValue1
+    #   -
+    #     key: sampleKey2
+    #     value: sampleValue2
 
   portRange:
      - 
-      end: 10000
-      start: 50000
+      end: 15000
+      start: 5000
     # - 
     #   end: 20000
     #   start: 10001

@@ -1,7 +1,7 @@
 apiVersion: aci.snat/v1
 kind: SnatLocalInfo
 metadata:
-  name: example-snatlocalinfo
+  name: examplesnatlocalinfo
 spec:
   localInfos:
     "ee0df48a-9386-11e9-a145-080027e9a6d6":

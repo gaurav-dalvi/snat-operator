@@ -2,15 +2,19 @@ package utils
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	// nodeinfo "github.com/noironetworks/aci-containers/pkg/nodeinfo/apis/aci.nodeinfo/v1"
-	nodeinfoTypes "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
+	aciv1 "github.com/gaurav-dalvi/snat-operator/pkg/apis/aci/v1"
+	"github.com/prometheus/common/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Check if given pod belongs to given deployment or not
@@ -45,18 +49,17 @@ func CheckIfPodForService(corev1.Pod, corev1.Service) bool {
 	return true
 }
 
-// Given a reconcile request name, it extracts out pod name by omiiting snat-<resourcename>- from it
-// It also extract out resource type name.
-// eg: snat-namespace-foo-podname -> podname, namespace, foo
-func GetPodNameFromReoncileRequest(requestName string) (string, string, string) {
+// Given a reconcile request name, it extracts out pod name by omiiting snat-policy- from it
+// eg: snat-policy-foo-podname -> podname, foo
+func GetPodNameFromReoncileRequest(requestName string) (string, string) {
 
 	temp := strings.Split(requestName, "-")
 	if len(temp) != 4 {
 		UtilLog.Info("Length should be 4", "input string:", requestName, "lengthGot", len(temp))
-		return "", "", ""
+		return "", ""
 	}
-	resourceType, resourceName, podName := temp[1], temp[2], temp[3]
-	return podName, resourceType, resourceName
+	snatPolicyName, podName := temp[2], temp[3]
+	return podName, snatPolicyName
 }
 
 // Get nodeinfo object matching given name of the node
@@ -65,12 +68,12 @@ func GetPodNameFromReoncileRequest(requestName string) (string, string, string) 
 // in Get call and directly get the object instead of doing List and iterating.
 // But for that namespace has to be knowen. We can push aci-containers-system / kube-system inserted as ENV var
 // in this container then we can refer to that.
-func GetNodeInfoCRObject(c client.Client, nodeName string) (nodeinfoTypes.NodeInfo, error) {
-	nodeinfoList := &nodeinfoTypes.NodeInfoList{}
+func GetNodeInfoCRObject(c client.Client, nodeName string) (aciv1.NodeInfo, error) {
+	nodeinfoList := &aciv1.NodeInfoList{}
 	err := c.List(context.TODO(), &client.ListOptions{Namespace: ""}, nodeinfoList)
 	if err != nil && errors.IsNotFound(err) {
 		UtilLog.Error(err, "Cound not find nodeinfo object")
-		return nodeinfoTypes.NodeInfo{}, err
+		return aciv1.NodeInfo{}, err
 	}
 
 	for _, item := range nodeinfoList.Items {
@@ -79,7 +82,7 @@ func GetNodeInfoCRObject(c client.Client, nodeName string) (nodeinfoTypes.NodeIn
 			return item, nil
 		}
 	}
-	return nodeinfoTypes.NodeInfo{}, err
+	return aciv1.NodeInfo{}, err
 
 }
 
@@ -89,6 +92,67 @@ func GetNodeNameFromReoncileRequest(requestName string) string {
 		return requestName[len("node-event-"):]
 	}
 	return requestName
+}
+
+// Given a nodeName, return LocalInfo CR object if present
+func GetLocalInfoCR(c client.Client, nodeName, namespace string) (aciv1.SnatLocalInfo, error) {
+
+	foundLocalIfo := &aciv1.SnatLocalInfo{}
+	err := c.Get(context.TODO(), types.NamespacedName{Name: nodeName, Namespace: namespace}, foundLocalIfo)
+	if err != nil && errors.IsNotFound(err) {
+		log.Info("LocalIfo not present ", "foundLocalIfo:", nodeName)
+		return aciv1.SnatLocalInfo{}, nil
+	} else if err != nil {
+		return aciv1.SnatLocalInfo{}, err
+	}
+
+	return *foundLocalIfo, nil
+}
+
+// Given a policyName, return SnatPolicy CR object if present
+func GetSnatPolicyCR(c client.Client, policyName string) (aciv1.SnatPolicy, error) {
+
+	foundSnatPolicy := &aciv1.SnatPolicy{}
+	err := c.Get(context.TODO(), types.NamespacedName{Name: policyName, Namespace: os.Getenv("ACI_SNAT_NAMESPACE")}, foundSnatPolicy)
+	if err != nil && errors.IsNotFound(err) {
+		log.Info("SnatPolicy not present", "foundSnatPolicy:", policyName)
+		return aciv1.SnatPolicy{}, nil
+	} else if err != nil {
+		return aciv1.SnatPolicy{}, err
+	}
+
+	return *foundSnatPolicy, nil
+}
+
+// createSnatLocalInfoCR Creates a SnatLocalInfo CR
+func CreateLocalInfoCR(c client.Client, localInfoSpec aciv1.SnatLocalInfoSpec, nodeName string) (reconcile.Result, error) {
+
+	obj := &aciv1.SnatLocalInfo{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nodeName,
+			Namespace: os.Getenv("ACI_SNAT_NAMESPACE"),
+		},
+		Spec: localInfoSpec,
+	}
+	err := c.Create(context.TODO(), obj)
+	if err != nil {
+		log.Error(err, "failed to create a snat locainfo cr")
+		return reconcile.Result{}, err
+	}
+	log.Info("Created localinfo object", "SnatLocalInfo", obj)
+	return reconcile.Result{}, nil
+}
+
+// UpdateSnatLocalInfoCR Updates a SnatLocalInfo CR
+func UpdateLocalInfoCR(c client.Client, localInfo aciv1.SnatLocalInfo) (reconcile.Result, error) {
+
+	err := c.Update(context.TODO(), &localInfo)
+	if err != nil {
+		log.Error(err, "failed to update a snat locainfo cr")
+		return reconcile.Result{}, err
+	}
+	log.Info("Updated localinfo object", "SnatLocalInfo", localInfo)
+	return reconcile.Result{}, nil
 }
 
 // // Get all SnatSubnet CRs from k8s clustner

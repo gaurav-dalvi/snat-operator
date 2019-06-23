@@ -78,9 +78,6 @@ spec:
               - selector
               - ' node'
               type: string
-          required:
-          - snatType
-          - globalInfos
           type: object
         status:
           type: object
